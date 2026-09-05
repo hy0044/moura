@@ -1,0 +1,27 @@
+version: 1
+
+sources:
+  requirements:
+    - req.md
+  specifications:
+    - spec.md
+
+requirements:
+  - id: REQ-001
+    scenarios:
+      - id: SCN-001
+        cases:
+          - id: CASE-001
+            verify:
+              - unit
+              - integration
+          - id: CASE-002
+            verify:
+              - unit
+              - e2e
+      - id: SCN-002
+        cases:
+          - id: CASE-001
+            verify:
+              - unit
+              - e2e
