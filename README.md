@@ -80,7 +80,7 @@ Allure Results (`allure-results/*.json`) is the first intended evidence adapter,
 
 ## Development
 
-Moura starts as a small Node.js 20+ and TypeScript project.
+Moura starts as a small Node.js 24+ and TypeScript project.
 
 ```sh
 pnpm install
