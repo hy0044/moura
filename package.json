@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Git-native traceability and verification coverage CLI",
   "license": "Apache-2.0",
+  "packageManager": "pnpm@10.28.1",
   "type": "module",
   "bin": {
     "moura": "./dist/cli.js"
@@ -19,7 +20,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test dist/*.test.js"
+    "test": "pnpm build && node --test dist/*.test.js",
+    "prepack": "pnpm build"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",

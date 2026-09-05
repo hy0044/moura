@@ -83,9 +83,9 @@ Allure Results (`allure-results/*.json`) is the first intended evidence adapter,
 Moura starts as a small Node.js 20+ and TypeScript project.
 
 ```sh
-npm install
-npm run typecheck
-npm test
+pnpm install
+pnpm typecheck
+pnpm test
 ```
 
 The current executable only exposes a version and an early-development help message. Domain types and canonical-ID construction are exported for continued implementation.
