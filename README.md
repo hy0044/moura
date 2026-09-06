@@ -40,7 +40,7 @@ Canonical IDs are identities, not paths or prescribed filenames. Reparenting a n
 
 The smallest coverage point is a canonical Case ID plus an open-ended verification-layer string, such as `REQ-001/SCN-001/CASE-001 + integration`. Tests and Cases have a many-to-many relationship; Moura does not require a proprietary test ID.
 
-See [Concepts](docs/concepts.md) and [ID model](docs/id-model.md) for details.
+See [Concepts](docs/concepts.md), the [v0.1 traceability specification](docs/config.md), and the [ID model](docs/id-model.md) for the authoritative details.
 
 ## Traceability manifest
 
@@ -55,6 +55,11 @@ sources:
   specifications:
     - spec.md
 
+verification:
+  layers:
+    - unit
+    - integration
+
 requirements:
   - id: REQ-001
     scenarios:
@@ -66,7 +71,7 @@ requirements:
               - integration
 ```
 
-Canonical IDs are intentionally omitted and derived from the nesting. Layer names are strings rather than a closed enum, allowing domains to use values such as `contract`, `security`, `manual`, `sil`, or `vehicle`. See the complete [example](examples/moura.yaml) and [configuration notes](docs/config.md).
+Canonical IDs are intentionally omitted and derived from the nesting. Layer names are strings rather than a closed enum, allowing domains to use values such as `contract`, `security`, `manual`, `sil`, or `vehicle`. The repository's own [`moura.yaml`](moura.yaml), [`req.md`](req.md), and [`spec.md`](spec.md) are the primary real-world example; see the [v0.1 contract](docs/config.md).
 
 ## Planned CLI
 
