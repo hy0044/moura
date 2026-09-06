@@ -1,0 +1,24 @@
+version: 1
+sources:
+  requirements: [req.md]
+  specifications: [spec.md]
+verification:
+  layers: [unit, integration]
+requirements:
+  - id: REQ-001
+    scenarios:
+      - id: SCN-001
+        cases:
+          - { id: CASE-001, verify: [unit, integration] }
+          - { id: CASE-002, verify: [unit] }
+          - { id: CASE-003, verify: [integration] }
+          - { id: CASE-004, verify: [integration] }
+          - { id: CASE-005, verify: [unit] }
+          - { id: CASE-006, verify: [unit] }
+          - { id: CASE-007, verify: [unit] }
+          - { id: CASE-008, verify: [unit] }
+          - { id: CASE-009, verify: [unit] }
+          - { id: CASE-010, verify: [unit] }
+          - { id: CASE-011, verify: [unit] }
+          - { id: CASE-012, verify: [unit] }
+          - { id: CASE-013, verify: [integration] }

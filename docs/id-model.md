@@ -12,6 +12,10 @@ The defaults are `REQ-001`, `SCN-001`, and `CASE-001`. They are conventions, not
 
 A local ID must be non-empty and must not contain `/`. The slash is reserved as the canonical hierarchy separator.
 
+Gaps in a numbering scheme are valid. Projects should never reuse a deleted ID;
+Git history is the v0.1 record of retired identities, and Moura does not maintain
+an ID registry.
+
 ## Canonical IDs
 
 Moura constructs canonical IDs from validated local IDs and parent relationships:
@@ -26,6 +30,8 @@ The canonical-ID function is the sole construction boundary in the codebase. Cal
 
 A canonical ID is a logical identifier, not a filesystem path. Implementations must not assume that it can safely or usefully become a filename.
 
+Canonical IDs must be unique across the project.
+
 ## Identity and reparenting
 
-Parentage contributes to identity. Moving `CASE-001` from `REQ-001/SCN-001` to `REQ-001/SCN-002` changes its canonical ID and represents a new Case. Moura analyzes the current Git state; it does not maintain a database to infer historical node movement.
+Parentage contributes to identity. Moving `CASE-001` from `REQ-001/SCN-001` to `REQ-001/SCN-002` changes its canonical ID and represents a new Case. Moura analyzes the current Git state; it does not maintain a database to infer historical node movement. Historical identity migration is not part of v0.1.
