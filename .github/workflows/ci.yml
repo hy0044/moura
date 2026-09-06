@@ -9,7 +9,8 @@ on:
       - main
 
 jobs:
-  validate:
+  quality:
+    name: Quality checks
     runs-on: ubuntu-latest
 
     steps:
