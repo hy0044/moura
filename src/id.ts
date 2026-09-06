@@ -21,7 +21,10 @@ export function localId(value: string): LocalId {
     throw new InvalidLocalIdError(value, "must not be empty");
   }
   if (value.includes(SEPARATOR)) {
-    throw new InvalidLocalIdError(value, `must not contain reserved separator '${SEPARATOR}'`);
+    throw new InvalidLocalIdError(
+      value,
+      `must not contain reserved separator '${SEPARATOR}'`,
+    );
   }
   return value;
 }
@@ -38,7 +41,10 @@ export function canonicalId(nodes: readonly TraceNode[]): CanonicalId {
 
 function assertHierarchy(kinds: readonly NodeKind[]): void {
   const hierarchy: readonly NodeKind[] = ["requirement", "scenario", "case"];
-  if (kinds.length > hierarchy.length || kinds.some((kind, index) => kind !== hierarchy[index])) {
+  if (
+    kinds.length > hierarchy.length ||
+    kinds.some((kind, index) => kind !== hierarchy[index])
+  ) {
     throw new Error(`Invalid node hierarchy: ${kinds.join(" -> ")}`);
   }
 }
