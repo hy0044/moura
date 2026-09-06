@@ -84,6 +84,10 @@ Moura starts as a small Node.js 24+ and TypeScript project.
 
 ```sh
 pnpm install
+pnpm lint
+pnpm lint:fix
+pnpm format
+pnpm format:check
 pnpm typecheck
 pnpm test
 ```

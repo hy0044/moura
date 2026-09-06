@@ -12,13 +12,17 @@ describe("canonicalId", () => {
   it("builds IDs from each valid hierarchy level", () => {
     assert.equal(canonicalId([requirement]), "REQ-001");
     assert.equal(canonicalId([requirement, scenario]), "REQ-001/SCN-001");
-    assert.equal(canonicalId([requirement, scenario, testCase]), "REQ-001/SCN-001/CASE-001");
+    assert.equal(
+      canonicalId([requirement, scenario, testCase]),
+      "REQ-001/SCN-001/CASE-001",
+    );
   });
 
   it("rejects a slash in any local ID", () => {
     assert.throws(() => localId("SCN/001"), InvalidLocalIdError);
     assert.throws(
-      () => canonicalId([requirement, { kind: "scenario", localId: "SCN/001" }]),
+      () =>
+        canonicalId([requirement, { kind: "scenario", localId: "SCN/001" }]),
       InvalidLocalIdError,
     );
   });
