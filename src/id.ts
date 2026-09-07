@@ -26,7 +26,7 @@ export function localId(value: string): LocalId {
       `must not contain reserved separator '${SEPARATOR}'`,
     );
   }
-  if (/\s/u.test(value)) {
+  if (/\p{White_Space}/u.test(value)) {
     throw new InvalidLocalIdError(value, "must not contain whitespace");
   }
   return value;

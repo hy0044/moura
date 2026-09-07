@@ -28,7 +28,13 @@ describe("canonicalId", () => {
   });
 
   it("rejects whitespace in any local ID", () => {
-    for (const value of ["LOGIN FLOW", "REQ 001", "SCN- 001", "CASE-\t001"]) {
+    for (const value of [
+      "LOGIN FLOW",
+      "REQ 001",
+      "SCN- 001",
+      "CASE-\t001",
+      "REQ-\u0085001",
+    ]) {
       assert.throws(() => localId(value), InvalidLocalIdError);
     }
 
@@ -46,6 +52,7 @@ describe("canonicalId", () => {
       "CASE-001",
       "login-flow",
       "login_flow",
+      "REQ-\uFEFF001",
     ]) {
       assert.equal(localId(value), value);
     }
