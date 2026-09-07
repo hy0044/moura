@@ -30,6 +30,12 @@ requirements:
 
 The schema is closed for v0.1: implementations must reject unknown fields in the objects shown above rather than silently assigning future meaning to them. Lists required by the model must be present and non-empty.
 
+A local ID must be a non-empty string containing neither `/` nor whitespace.
+Whitespace includes spaces, tabs, and other whitespace characters. Prefixes and
+fixed digit counts are not enforced: `REQ-001`, `login-flow`, and `login_flow`
+are valid examples, while `REQ 001` and `SCN- 001` are invalid. Canonical IDs
+continue to join local IDs with `/`.
+
 ## Markdown source convention
 
 Sources are natural Markdown documents using ATX headings (`#` through `######`). An ID-bearing heading starts, after the heading marker and whitespace, with its local ID as the first whitespace-delimited token; the rest is an optional title.
@@ -61,7 +67,7 @@ The future `moura validate` command must return failure, without warnings, when 
 - a manifest Requirement absent from requirement sources;
 - a manifest Scenario or Case absent under its expected Markdown ancestors;
 - a duplicate Requirement ID in the project, Scenario ID within its Requirement, or Case ID within its Scenario;
-- an empty local ID or one containing `/`;
+- an empty local ID or one containing `/` or whitespace;
 - a broken or missing Requirement → Scenario → Case relationship;
 - a Requirement without a Scenario, a Scenario without a Case, or a Case without a non-empty `verify` list;
 - an undeclared verification layer or a repeated layer within one Case;

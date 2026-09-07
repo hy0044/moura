@@ -26,7 +26,7 @@ Requirement
       └ Case
 ```
 
-A **local ID** identifies a node among its siblings. The v0.1 convention is `REQ-001`, `SCN-001`, and `CASE-001`, but the model does not embed those prefixes or a three-digit rule. `/` is reserved and is never valid inside a local ID.
+A **local ID** identifies a node among its siblings. The v0.1 convention is `REQ-001`, `SCN-001`, and `CASE-001`, but the model does not embed those prefixes or a three-digit rule. Local IDs must be non-empty and cannot contain `/` or whitespace.
 
 Moura derives a logical **canonical ID** from the hierarchy:
 

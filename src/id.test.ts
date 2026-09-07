@@ -27,6 +27,30 @@ describe("canonicalId", () => {
     );
   });
 
+  it("rejects whitespace in any local ID", () => {
+    for (const value of ["LOGIN FLOW", "REQ 001", "SCN- 001", "CASE-\t001"]) {
+      assert.throws(() => localId(value), InvalidLocalIdError);
+    }
+
+    assert.throws(
+      () =>
+        canonicalId([requirement, { kind: "scenario", localId: "SCN\t001" }]),
+      InvalidLocalIdError,
+    );
+  });
+
+  it("accepts IDs without whitespace or the reserved separator", () => {
+    for (const value of [
+      "REQ-001",
+      "SCN-001",
+      "CASE-001",
+      "login-flow",
+      "login_flow",
+    ]) {
+      assert.equal(localId(value), value);
+    }
+  });
+
   it("rejects an invalid hierarchy", () => {
     assert.throws(() => canonicalId([scenario]), /Invalid node hierarchy/);
   });

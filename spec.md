@@ -34,7 +34,8 @@ Validation fails when a Case local ID occurs more than once under the same Scena
 
 #### CASE-008 Reject an invalid local ID
 
-Validation fails when a local ID is empty or contains `/`.
+Validation fails when a local ID is empty or contains `/` or whitespace,
+including spaces and tabs.
 
 #### CASE-009 Reject an incomplete hierarchy
 

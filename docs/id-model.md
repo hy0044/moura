@@ -10,7 +10,11 @@ A local ID identifies a node in its immediate scope:
 
 The defaults are `REQ-001`, `SCN-001`, and `CASE-001`. They are conventions, not assumptions in the domain model. Future configuration may accept forms such as `R-001`, `LOGIN-04`, or `CASE-INVALID`.
 
-A local ID must be non-empty and must not contain `/`. The slash is reserved as the canonical hierarchy separator.
+A local ID must be non-empty and must contain neither `/` nor whitespace,
+including spaces and tabs. The slash is reserved as the canonical hierarchy
+separator. Naming prefixes and fixed digit counts remain conventions rather than
+core constraints, so `REQ-001`, `login-flow`, and `login_flow` are valid while
+`LOGIN FLOW`, `REQ 001`, and `SCN- 001` are invalid.
 
 Gaps in a numbering scheme are valid. Projects should never reuse a deleted ID;
 Git history is the v0.1 record of retired identities, and Moura does not maintain
