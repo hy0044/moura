@@ -450,6 +450,62 @@ describe("Markdown hierarchy and canonical matching", () => {
     );
   });
 
+  it("detects every reserved Moura ID prefix in requirement sources", () => {
+    for (const id of ["REQ-999", "SCN-999", "CASE-999"]) {
+      const errors = validate(
+        validManifest,
+        `${validRequirement}\n## ${id} Undeclared`,
+        validSpecification,
+      ).errors;
+      assert.ok(
+        errors.some(
+          (item) =>
+            item.code === "unmanaged-markdown-id" && item.message.includes(id),
+        ),
+        `expected ${id} to be reported as unmanaged`,
+      );
+    }
+  });
+
+  it("does not report declared child IDs as unmanaged in requirement sources", () => {
+    const requirement = `${validRequirement}
+## SCN-001 Scenario details belong elsewhere
+## CASE-001 Case details belong elsewhere`;
+    assert.deepEqual(
+      validate(validManifest, requirement, validSpecification).errors,
+      [],
+    );
+  });
+
+  it("does not let child IDs in a requirement source satisfy specification hierarchy", () => {
+    const requirement = `${validRequirement}
+## SCN-001 Misplaced scenario
+### CASE-001 Misplaced case`;
+    const errors = validate(
+      validManifest,
+      requirement,
+      "## REQ-001 Requirement only",
+    ).errors;
+    assert.ok(
+      errors.some((item) => item.code === "missing-specification-scenario"),
+    );
+    assert.ok(
+      errors.some((item) => item.code === "missing-specification-case"),
+    );
+    assert.ok(!errors.some((item) => item.code === "unmanaged-markdown-id"));
+  });
+
+  it("ignores ordinary undeclared headings in requirement sources", () => {
+    assert.deepEqual(
+      validate(
+        validManifest,
+        `${validRequirement}\n## Architecture Notes`,
+        validSpecification,
+      ).errors,
+      [],
+    );
+  });
+
   it("reports invalid heading parentage", () => {
     const errors = validate(
       validManifest,

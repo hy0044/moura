@@ -25,14 +25,29 @@ interface Heading {
   readonly token: string;
 }
 
+const RESERVED_ID_PREFIXES = ["REQ-", "SCN-", "CASE-"] as const;
+
 export function parseRequirementMarkdown(
   text: string,
   source: string,
   manifest: MouraManifest,
 ): ValidationResult<readonly string[]> {
   const expected = new Set(manifest.requirements.map((item) => item.localId));
+  const declared = new Set(
+    manifest.requirements.flatMap((requirement) => [
+      requirement.localId,
+      ...requirement.scenarios.flatMap((scenario) => [
+        scenario.localId,
+        ...scenario.cases.map((testCase) => testCase.localId),
+      ]),
+    ]),
+  );
   const requirements = headings(text)
-    .filter(({ token }) => expected.has(token) || token.startsWith("REQ-"))
+    .filter(
+      ({ token }) =>
+        expected.has(token) ||
+        (hasReservedIdPrefix(token) && !declared.has(token)),
+    )
     .map(({ token }) => token);
   return { value: requirements, errors: [] };
 }
@@ -194,13 +209,13 @@ function classify(
   if (scenarios.has(token) && !cases.has(token)) return "scenario";
   if (cases.has(token) && !scenarios.has(token)) return "case";
 
-  const managed =
-    declaredIds.has(token) ||
-    token.startsWith("REQ-") ||
-    token.startsWith("SCN-") ||
-    token.startsWith("CASE-");
+  const managed = declaredIds.has(token) || hasReservedIdPrefix(token);
   if (!managed) return undefined;
   if (scenario && depth > scenarioDepth) return "case";
   if (requirement && depth > requirementDepth) return "scenario";
   return "requirement";
+}
+
+function hasReservedIdPrefix(token: string): boolean {
+  return RESERVED_ID_PREFIXES.some((prefix) => token.startsWith(prefix));
 }
