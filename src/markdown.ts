@@ -126,23 +126,14 @@ export function parseSpecificationMarkdown(
 
 function headings(text: string): Heading[] {
   const tree = unified().use(remarkParse).parse(text) as Root;
-  return collectHeadings(tree, text);
-}
-
-function collectHeadings(
-  node: Root | Root["children"][number],
-  text: string,
-): Heading[] {
-  const result: Heading[] = [];
-  if (node.type === "heading") {
+  // Moura structure is expressed only by document-level headings. A heading
+  // nested in a block quote, list, or another container is content belonging
+  // to that container, not an active Requirement, Scenario, or Case.
+  return tree.children.flatMap((node) => {
+    if (node.type !== "heading") return [];
     const heading = atxHeading(node, text);
-    if (heading) result.push(heading);
-  }
-  if ("children" in node) {
-    for (const child of node.children)
-      result.push(...collectHeadings(child, text));
-  }
-  return result;
+    return heading ? [heading] : [];
+  });
 }
 
 function atxHeading(node: MdastHeading, text: string): Heading | undefined {

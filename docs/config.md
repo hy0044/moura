@@ -38,7 +38,7 @@ continue to join local IDs with `/`.
 
 ## Markdown source convention
 
-Sources are natural Markdown documents using ATX headings (`#` through `######`). An ID-bearing heading starts, after the heading marker and whitespace, with its local ID as the first whitespace-delimited token; the rest is an optional title.
+Sources are natural Markdown documents using document-level ATX headings (`#` through `######`). Headings nested inside block quotes, lists, or other containers are prose rather than Moura structure and are ignored. An ID-bearing heading starts, after the heading marker and whitespace, with its local ID as the first whitespace-delimited token; the rest is an optional title.
 
 ```markdown
 # Requirements
