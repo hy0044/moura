@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep, win32 } from "node:path";
 
 import { parseManifest } from "./manifest.js";
@@ -26,12 +26,22 @@ export function validateProject(input: ProjectInput): ValidationResult {
   if (!parsed.value) return { errors };
   const requirements = new Map<string, readonly string[]>();
   const specifications = new Map();
-  for (const [source, text] of input.requirementSources) {
+  for (const source of parsed.value.sources.requirements) {
+    const text = input.requirementSources.get(source);
+    if (text === undefined) {
+      errors.push(missingSource(source, "requirement"));
+      continue;
+    }
     const result = parseRequirementMarkdown(text, source, parsed.value);
     errors.push(...result.errors);
     if (result.value) requirements.set(source, result.value);
   }
-  for (const [source, text] of input.specificationSources) {
+  for (const source of parsed.value.sources.specifications) {
+    const text = input.specificationSources.get(source);
+    if (text === undefined) {
+      errors.push(missingSource(source, "specification"));
+      continue;
+    }
     const result = parseSpecificationMarkdown(text, source, parsed.value);
     errors.push(...result.errors);
     if (result.value) specifications.set(source, result.value);
@@ -40,6 +50,14 @@ export function validateProject(input: ProjectInput): ValidationResult {
     ...validateStructure(parsed.value, { requirements, specifications }),
   );
   return { errors };
+}
+
+function missingSource(path: string, kind: string): ValidationError {
+  return error(
+    "missing-source",
+    `Configured ${kind} source ${path} was not provided`,
+    { source: path },
+  );
 }
 
 /** Filesystem adapter used by the CLI; integrations can use validateProject directly. */
@@ -87,7 +105,7 @@ async function load(
   errors: ValidationError[],
   kind: string,
 ): Promise<void> {
-  const projectRoot = resolve(directory);
+  const projectRoot = await realpath(resolve(directory));
   for (const path of paths) {
     const targetPath = resolve(projectRoot, path);
     const relativePath = relative(projectRoot, targetPath);
@@ -108,7 +126,23 @@ async function load(
       continue;
     }
     try {
-      target.set(path, await readFile(targetPath, "utf8"));
+      const realTargetPath = await realpath(targetPath);
+      const realRelativePath = relative(projectRoot, realTargetPath);
+      if (
+        realRelativePath === ".." ||
+        realRelativePath.startsWith(`..${sep}`) ||
+        isAbsolute(realRelativePath)
+      ) {
+        errors.push(
+          error(
+            "invalid-source-path",
+            `Configured ${kind} source ${path} must remain within the project directory`,
+            { source: path },
+          ),
+        );
+        continue;
+      }
+      target.set(path, await readFile(realTargetPath, "utf8"));
     } catch (cause) {
       errors.push(readError(path, cause, kind));
     }
