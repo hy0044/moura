@@ -1,4 +1,7 @@
 import type { MouraManifest } from "./manifest.js";
+import type { Heading as MdastHeading, Root } from "mdast";
+import remarkParse from "remark-parse";
+import { unified } from "unified";
 import {
   error,
   type ValidationError,
@@ -122,29 +125,40 @@ export function parseSpecificationMarkdown(
 }
 
 function headings(text: string): Heading[] {
+  const tree = unified().use(remarkParse).parse(text) as Root;
+  return collectHeadings(tree, text);
+}
+
+function collectHeadings(
+  node: Root | Root["children"][number],
+  text: string,
+): Heading[] {
   const result: Heading[] = [];
-  let fence: { marker: "`" | "~"; length: number } | undefined;
-  for (const line of text.split(/\r?\n/u)) {
-    if (fence) {
-      if (isClosingFence(line, fence)) fence = undefined;
-      continue;
-    }
-    const openingFence = /^(?: {0,3})(`{3,}|~{3,})(.*)$/u.exec(line);
-    if (
-      openingFence?.[1] &&
-      isOpeningFence(openingFence[1], openingFence[2] ?? "")
-    ) {
-      fence = {
-        marker: openingFence[1][0] as "`" | "~",
-        length: openingFence[1].length,
-      };
-      continue;
-    }
-    const match = /^(#{1,6})[\t ]+([^\p{White_Space}#]+)/u.exec(line);
-    if (match?.[1] && match[2])
-      result.push({ depth: match[1].length, token: match[2] });
+  if (node.type === "heading") {
+    const heading = atxHeading(node, text);
+    if (heading) result.push(heading);
+  }
+  if ("children" in node) {
+    for (const child of node.children)
+      result.push(...collectHeadings(child, text));
   }
   return result;
+}
+
+function atxHeading(node: MdastHeading, text: string): Heading | undefined {
+  const start = node.position?.start.offset;
+  const end = node.position?.end.offset;
+  if (start === undefined || end === undefined) return undefined;
+
+  // Use the original source for Moura's token rather than imposing an ID
+  // alphabet here. remark-parse remains responsible for Markdown syntax.
+  const source = text.slice(start, end);
+  const marker = new RegExp(`^#{${node.depth}}(?:[\\t ]+|$)`, "u").exec(source);
+  if (!marker) return undefined; // Excludes Setext headings.
+  const token = /^[\p{White_Space}]*([^\p{White_Space}]+)/u.exec(
+    source.slice(marker[0].length),
+  )?.[1];
+  return token ? { depth: node.depth, token } : undefined;
 }
 
 function classify(
@@ -198,16 +212,4 @@ function classify(
   if (scenario && depth > scenarioDepth) return "case";
   if (requirement && depth > requirementDepth) return "scenario";
   return "requirement";
-}
-
-function isOpeningFence(marker: string, rest: string): boolean {
-  return marker[0] === "~" || !rest.includes("`");
-}
-
-function isClosingFence(
-  line: string,
-  fence: { marker: "`" | "~"; length: number },
-): boolean {
-  const match = /^(?: {0,3})(`{3,}|~{3,})[\t ]*$/u.exec(line);
-  return match?.[1]?.[0] === fence.marker && match[1].length >= fence.length;
 }

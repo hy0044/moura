@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -197,6 +197,51 @@ describe("manifest parsing and validation", () => {
     }
   });
 
+  it("rejects a configured source that resolves through a symlink outside the project", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "moura-test-"));
+    const directory = join(parent, "project");
+    try {
+      await mkdir(directory);
+      await writeFile(join(directory, "moura.yaml"), validManifest);
+      await writeFile(join(directory, "spec.md"), validSpecification);
+      await writeFile(join(parent, "outside.md"), validRequirement);
+      await symlink(join(parent, "outside.md"), join(directory, "req.md"));
+      const result = await validateProjectDirectory(directory);
+      assert.ok(
+        result.errors.some((item) => item.code === "invalid-source-path"),
+      );
+    } finally {
+      await rm(parent, { recursive: true });
+    }
+  });
+
+  it("allows a configured source that resolves through an internal symlink", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
+    try {
+      await writeFile(join(directory, "moura.yaml"), validManifest);
+      await writeFile(join(directory, "actual-req.md"), validRequirement);
+      await symlink("actual-req.md", join(directory, "req.md"));
+      await writeFile(join(directory, "spec.md"), validSpecification);
+      assert.deepEqual((await validateProjectDirectory(directory)).errors, []);
+    } finally {
+      await rm(directory, { recursive: true });
+    }
+  });
+
+  it("does not substitute an unrelated source-map entry for a configured path", () => {
+    const result = validateProject({
+      manifest: validManifest,
+      requirementSources: new Map([["other.md", validRequirement]]),
+      specificationSources: new Map([["spec.md", validSpecification]]),
+    });
+    assert.ok(result.errors.some((item) => item.code === "missing-source"));
+    assert.ok(
+      result.errors.some(
+        (item) => item.code === "missing-requirement-markdown",
+      ),
+    );
+  });
+
   it("collects multiple independent errors", () => {
     const found = codes(
       validManifest
@@ -237,6 +282,52 @@ describe("Markdown hierarchy and canonical matching", () => {
 `;
     assert.deepEqual(
       validate(validManifest, validRequirement, fenced).errors,
+      [],
+    );
+  });
+
+  it("ignores headings in block and single-line HTML comments", () => {
+    const commented = `${validSpecification}
+<!--
+## REQ-999 Disabled requirement
+### SCN-999 Disabled scenario
+#### CASE-999 Disabled case
+-->
+<!-- ## REQ-998 Disabled requirement -->
+`;
+    assert.deepEqual(
+      validate(validManifest, validRequirement, commented).errors,
+      [],
+    );
+  });
+
+  it("recognizes ATX headings with up to three leading spaces", () => {
+    assert.deepEqual(
+      validate(
+        validManifest,
+        " ## REQ-001 Requirement\n",
+        " ## REQ-001 Requirement\n  ### SCN-001 Scenario\n   #### CASE-001 Case\n",
+      ).errors,
+      [],
+    );
+  });
+
+  it("does not treat four-space-indented lines as ATX headings", () => {
+    const specification = `${validSpecification}\n    ## REQ-999 Not a heading\n`;
+    assert.deepEqual(
+      validate(validManifest, validRequirement, specification).errors,
+      [],
+    );
+  });
+
+  it("preserves # in the complete whitespace-delimited ID token", () => {
+    const manifest = validManifest.replaceAll("REQ-001", "REQ-001#draft");
+    assert.deepEqual(
+      validate(
+        manifest,
+        "## REQ-001#draft Requirement\n",
+        validSpecification.replace("REQ-001", "REQ-001#draft"),
+      ).errors,
       [],
     );
   });
