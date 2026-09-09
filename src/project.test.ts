@@ -450,6 +450,34 @@ describe("Markdown hierarchy and canonical matching", () => {
     );
   });
 
+  it("detects every reserved Moura ID prefix in requirement sources", () => {
+    for (const id of ["REQ-999", "SCN-999", "CASE-999"]) {
+      const errors = validate(
+        validManifest,
+        `${validRequirement}\n## ${id} Undeclared`,
+        validSpecification,
+      ).errors;
+      assert.ok(
+        errors.some(
+          (item) =>
+            item.code === "unmanaged-markdown-id" && item.message.includes(id),
+        ),
+        `expected ${id} to be reported as unmanaged`,
+      );
+    }
+  });
+
+  it("ignores ordinary undeclared headings in requirement sources", () => {
+    assert.deepEqual(
+      validate(
+        validManifest,
+        `${validRequirement}\n## Architecture Notes`,
+        validSpecification,
+      ).errors,
+      [],
+    );
+  });
+
   it("reports invalid heading parentage", () => {
     const errors = validate(
       validManifest,
