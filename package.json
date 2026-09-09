@@ -24,7 +24,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "pnpm build && node --test \"dist/*.test.js\"",
+    "test": "pnpm build && node --test dist/*.test.js",
     "prepack": "pnpm build"
   },
   "devDependencies": {
@@ -34,5 +34,8 @@
     "prettier": "^3.9.6",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.69.0"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
   }
 }
