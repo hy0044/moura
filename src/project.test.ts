@@ -301,6 +301,56 @@ describe("Markdown hierarchy and canonical matching", () => {
     );
   });
 
+  it("does not recognize a Requirement heading inside a blockquote", () => {
+    const errors = validate(
+      validManifest,
+      "> ## REQ-001 Retired requirement\n",
+      validSpecification,
+    ).errors;
+    assert.ok(
+      errors.some((item) => item.code === "missing-requirement-markdown"),
+    );
+  });
+
+  it("does not satisfy the specification with a quoted hierarchy", () => {
+    const quoted = [
+      "> ## REQ-001 Old requirement",
+      ">",
+      "> ### SCN-001 Old scenario",
+      ">",
+      "> #### CASE-001 Old case",
+      "",
+    ].join("\n");
+    const errors = validate(validManifest, validRequirement, quoted).errors;
+    assert.ok(
+      errors.some((item) => item.code === "missing-specification-requirement"),
+    );
+    assert.ok(
+      errors.some((item) => item.code === "missing-specification-scenario"),
+    );
+    assert.ok(
+      errors.some((item) => item.code === "missing-specification-case"),
+    );
+  });
+
+  it("recognizes a top-level Requirement, Scenario, and Case hierarchy", () => {
+    assert.deepEqual(
+      validate(validManifest, validRequirement, validSpecification).errors,
+      [],
+    );
+  });
+
+  it("does not recognize a heading nested inside a list", () => {
+    const errors = validate(
+      validManifest,
+      "- ## REQ-001 Listed requirement\n",
+      validSpecification,
+    ).errors;
+    assert.ok(
+      errors.some((item) => item.code === "missing-requirement-markdown"),
+    );
+  });
+
   it("recognizes ATX headings with up to three leading spaces", () => {
     assert.deepEqual(
       validate(
