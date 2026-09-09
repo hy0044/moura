@@ -467,6 +467,34 @@ describe("Markdown hierarchy and canonical matching", () => {
     }
   });
 
+  it("does not report declared child IDs as unmanaged in requirement sources", () => {
+    const requirement = `${validRequirement}
+## SCN-001 Scenario details belong elsewhere
+## CASE-001 Case details belong elsewhere`;
+    assert.deepEqual(
+      validate(validManifest, requirement, validSpecification).errors,
+      [],
+    );
+  });
+
+  it("does not let child IDs in a requirement source satisfy specification hierarchy", () => {
+    const requirement = `${validRequirement}
+## SCN-001 Misplaced scenario
+### CASE-001 Misplaced case`;
+    const errors = validate(
+      validManifest,
+      requirement,
+      "## REQ-001 Requirement only",
+    ).errors;
+    assert.ok(
+      errors.some((item) => item.code === "missing-specification-scenario"),
+    );
+    assert.ok(
+      errors.some((item) => item.code === "missing-specification-case"),
+    );
+    assert.ok(!errors.some((item) => item.code === "unmanaged-markdown-id"));
+  });
+
   it("ignores ordinary undeclared headings in requirement sources", () => {
     assert.deepEqual(
       validate(

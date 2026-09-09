@@ -33,8 +33,21 @@ export function parseRequirementMarkdown(
   manifest: MouraManifest,
 ): ValidationResult<readonly string[]> {
   const expected = new Set(manifest.requirements.map((item) => item.localId));
+  const declared = new Set(
+    manifest.requirements.flatMap((requirement) => [
+      requirement.localId,
+      ...requirement.scenarios.flatMap((scenario) => [
+        scenario.localId,
+        ...scenario.cases.map((testCase) => testCase.localId),
+      ]),
+    ]),
+  );
   const requirements = headings(text)
-    .filter(({ token }) => expected.has(token) || hasReservedIdPrefix(token))
+    .filter(
+      ({ token }) =>
+        expected.has(token) ||
+        (hasReservedIdPrefix(token) && !declared.has(token)),
+    )
     .map(({ token }) => token);
   return { value: requirements, errors: [] };
 }
