@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep, win32 } from "node:path";
 
 import { parseManifest } from "./manifest.js";
 import {
@@ -87,9 +87,28 @@ async function load(
   errors: ValidationError[],
   kind: string,
 ): Promise<void> {
+  const projectRoot = resolve(directory);
   for (const path of paths) {
+    const targetPath = resolve(projectRoot, path);
+    const relativePath = relative(projectRoot, targetPath);
+    if (
+      isAbsolute(path) ||
+      win32.isAbsolute(path) ||
+      relativePath === ".." ||
+      relativePath.startsWith(`..${sep}`) ||
+      isAbsolute(relativePath)
+    ) {
+      errors.push(
+        error(
+          "invalid-source-path",
+          `Configured ${kind} source ${path} must remain within the project directory`,
+          { source: path },
+        ),
+      );
+      continue;
+    }
     try {
-      target.set(path, await readFile(resolve(directory, path), "utf8"));
+      target.set(path, await readFile(targetPath, "utf8"));
     } catch (cause) {
       errors.push(readError(path, cause, kind));
     }

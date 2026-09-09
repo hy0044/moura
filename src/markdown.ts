@@ -53,6 +53,7 @@ export function parseSpecificationMarkdown(
       ),
     ),
   );
+  const declaredIds = new Set([...reqIds, ...scnIds, ...caseIds]);
   const result: { id: string; scenarios: { id: string; cases: string[] }[] }[] =
     [];
   let currentRequirement: (typeof result)[number] | undefined;
@@ -61,12 +62,24 @@ export function parseSpecificationMarkdown(
   let scenarioDepth = 0;
 
   for (const heading of headings(text)) {
-    const kind = classify(heading.token, reqIds, scnIds, caseIds);
+    if (currentScenario && heading.depth <= scenarioDepth)
+      currentScenario = undefined;
+    if (currentRequirement && heading.depth <= requirementDepth)
+      currentRequirement = undefined;
+
+    const kind = classify(
+      heading,
+      currentRequirement,
+      currentScenario,
+      manifest,
+      reqIds,
+      scnIds,
+      caseIds,
+      declaredIds,
+      requirementDepth,
+      scenarioDepth,
+    );
     if (!kind) {
-      if (currentScenario && heading.depth <= scenarioDepth)
-        currentScenario = undefined;
-      if (currentRequirement && heading.depth <= requirementDepth)
-        currentRequirement = undefined;
       continue;
     }
     if (kind === "requirement") {
@@ -110,7 +123,23 @@ export function parseSpecificationMarkdown(
 
 function headings(text: string): Heading[] {
   const result: Heading[] = [];
+  let fence: { marker: "`" | "~"; length: number } | undefined;
   for (const line of text.split(/\r?\n/u)) {
+    if (fence) {
+      if (isClosingFence(line, fence)) fence = undefined;
+      continue;
+    }
+    const openingFence = /^(?: {0,3})(`{3,}|~{3,})(.*)$/u.exec(line);
+    if (
+      openingFence?.[1] &&
+      isOpeningFence(openingFence[1], openingFence[2] ?? "")
+    ) {
+      fence = {
+        marker: openingFence[1][0] as "`" | "~",
+        length: openingFence[1].length,
+      };
+      continue;
+    }
     const match = /^(#{1,6})[\t ]+([^\p{White_Space}#]+)/u.exec(line);
     if (match?.[1] && match[2])
       result.push({ depth: match[1].length, token: match[2] });
@@ -119,13 +148,66 @@ function headings(text: string): Heading[] {
 }
 
 function classify(
-  token: string,
+  heading: Heading,
+  requirement: MarkdownRequirement | undefined,
+  scenario: MarkdownScenario | undefined,
+  manifest: MouraManifest,
   requirements: Set<string>,
   scenarios: Set<string>,
   cases: Set<string>,
+  declaredIds: Set<string>,
+  requirementDepth: number,
+  scenarioDepth: number,
 ): "requirement" | "scenario" | "case" | undefined {
-  if (requirements.has(token) || token.startsWith("REQ-")) return "requirement";
-  if (scenarios.has(token) || token.startsWith("SCN-")) return "scenario";
-  if (cases.has(token) || token.startsWith("CASE-")) return "case";
-  return undefined;
+  const { depth, token } = heading;
+  const manifestRequirement = requirement
+    ? manifest.requirements.find((item) => item.localId === requirement.id)
+    : undefined;
+  const manifestScenario = scenario
+    ? manifestRequirement?.scenarios.find(
+        (item) => item.localId === scenario.id,
+      )
+    : undefined;
+
+  // The active ancestors and relative heading depth disambiguate scoped local
+  // IDs. Prefixes are only used to notice an undeclared managed token below.
+  if (
+    scenario &&
+    depth > scenarioDepth &&
+    manifestScenario?.cases.some((item) => item.localId === token)
+  )
+    return "case";
+  if (
+    requirement &&
+    depth > requirementDepth &&
+    manifestRequirement?.scenarios.some((item) => item.localId === token)
+  )
+    return "scenario";
+  if (requirements.has(token)) return "requirement";
+  // A declared ID that has only one possible kind remains identifiable when
+  // its expected parent is missing, so the caller can report bad hierarchy.
+  if (scenarios.has(token) && !cases.has(token)) return "scenario";
+  if (cases.has(token) && !scenarios.has(token)) return "case";
+
+  const managed =
+    declaredIds.has(token) ||
+    token.startsWith("REQ-") ||
+    token.startsWith("SCN-") ||
+    token.startsWith("CASE-");
+  if (!managed) return undefined;
+  if (scenario && depth > scenarioDepth) return "case";
+  if (requirement && depth > requirementDepth) return "scenario";
+  return "requirement";
+}
+
+function isOpeningFence(marker: string, rest: string): boolean {
+  return marker[0] === "~" || !rest.includes("`");
+}
+
+function isClosingFence(
+  line: string,
+  fence: { marker: "`" | "~"; length: number },
+): boolean {
+  const match = /^(?: {0,3})(`{3,}|~{3,})[\t ]*$/u.exec(line);
+  return match?.[1]?.[0] === fence.marker && match[1].length >= fence.length;
 }

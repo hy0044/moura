@@ -64,6 +64,15 @@ describe("manifest parsing and validation", () => {
     );
   });
 
+  it("rejects duplicate YAML mapping keys", () => {
+    const result = parseManifest(`version: 1\nversion: 1\n`);
+    assert.ok(result.errors.some((item) => item.code === "invalid-yaml"));
+    assert.match(
+      result.errors[0]?.message ?? "",
+      /unique|map keys|duplicate/iu,
+    );
+  });
+
   it("reports duplicate Requirements, Scenarios, and Cases", () => {
     const manifest = validManifest
       .replace(
@@ -167,6 +176,27 @@ describe("manifest parsing and validation", () => {
     }
   });
 
+  it("rejects source paths outside the project directory before reading", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
+    try {
+      for (const source of [
+        "../outside.md",
+        "/tmp/outside.md",
+        "C:\\outside.md",
+      ]) {
+        const manifest = validManifest.replace("req.md", source);
+        await writeFile(join(directory, "moura.yaml"), manifest);
+        const result = await validateProjectDirectory(directory);
+        assert.ok(
+          result.errors.some((item) => item.code === "invalid-source-path"),
+          source,
+        );
+      }
+    } finally {
+      await rm(directory, { recursive: true });
+    }
+  });
+
   it("collects multiple independent errors", () => {
     const found = codes(
       validManifest
@@ -190,6 +220,64 @@ describe("Markdown hierarchy and canonical matching", () => {
     assert.deepEqual(result.value?.requirements[0]?.scenarios[0]?.cases, [
       "CASE-001",
     ]);
+  });
+
+  it("ignores heading-like content in backtick and tilde fences", () => {
+    const fenced = `${validSpecification}
+\`\`\`md
+## REQ-999
+### SCN-999
+#### CASE-999
+\`\`\`
+~~~markdown
+## REQ-998
+### SCN-998
+#### CASE-998
+~~~~
+`;
+    assert.deepEqual(
+      validate(validManifest, validRequirement, fenced).errors,
+      [],
+    );
+  });
+
+  it("uses hierarchy to disambiguate local IDs shared by every node kind", () => {
+    const manifest = validManifest
+      .replace("REQ-001", "shared")
+      .replace("SCN-001", "shared")
+      .replace("CASE-001", "shared");
+    const result = validate(
+      manifest,
+      "# Requirements\n## shared Requirement\n",
+      "# Specification\n## shared Requirement\n### shared Scenario\n#### shared Case\n",
+    );
+    assert.deepEqual(result.errors, []);
+  });
+
+  it("allows Requirement/Scenario and Scenario/Case ID sharing independently", () => {
+    const requirementScenario = validManifest
+      .replace("REQ-001", "same-parent")
+      .replace("SCN-001", "same-parent");
+    assert.deepEqual(
+      validate(
+        requirementScenario,
+        "## same-parent\n",
+        "## same-parent\n### same-parent\n#### CASE-001\n",
+      ).errors,
+      [],
+    );
+
+    const scenarioCase = validManifest
+      .replace("SCN-001", "same-child")
+      .replace("CASE-001", "same-child");
+    assert.deepEqual(
+      validate(
+        scenarioCase,
+        validRequirement,
+        "## REQ-001\n### same-child\n#### same-child\n",
+      ).errors,
+      [],
+    );
   });
 
   it("detects a Case under the wrong Scenario", () => {

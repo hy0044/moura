@@ -32,7 +32,9 @@ export function parseManifest(
   source = "moura.yaml",
 ): ValidationResult<MouraManifest> {
   const errors: ValidationError[] = [];
-  const document = parseDocument(text, { uniqueKeys: false });
+  // yaml's default unique-key check makes ambiguous duplicate mappings a
+  // normal configuration error while still allowing us to collect diagnostics.
+  const document = parseDocument(text);
   for (const problem of document.errors) {
     errors.push(
       error("invalid-yaml", `${source}: ${problem.message}`, { source }),
