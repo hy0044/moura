@@ -73,6 +73,49 @@ describe("manifest parsing and validation", () => {
     );
   });
 
+  it("propagates a custom manifest source to every parsing error", () => {
+    const nested = parseManifest(
+      `
+version: 2
+unexpected: true
+sources:
+  unexpected: true
+  requirements: wrong
+verification:
+  unexpected: true
+  layers: [1]
+requirements:
+  - unexpected: true
+    scenarios:
+      - id: SCN-001
+        unexpected: true
+        cases:
+          - unexpected: true
+            verify: wrong
+`,
+      "config/custom.yaml",
+    );
+    const missingMappings = parseManifest(
+      "version: 1\nsources: wrong\nverification: wrong\nrequirements: wrong\n",
+      "config/custom.yaml",
+    );
+    const errors = [...nested.errors, ...missingMappings.errors];
+    assert.ok(errors.length > 0);
+    assert.ok(errors.some((item) => item.code === "unsupported-version"));
+    assert.ok(errors.some((item) => item.code === "unknown-field"));
+    assert.ok(errors.some((item) => item.code === "invalid-manifest"));
+    assert.deepEqual(
+      new Set(errors.map((item) => item.source)),
+      new Set(["config/custom.yaml"]),
+    );
+  });
+
+  it("keeps moura.yaml as the default manifest error source", () => {
+    const result = parseManifest("version: 2\n");
+    assert.ok(result.errors.length > 0);
+    assert.ok(result.errors.every((item) => item.source === "moura.yaml"));
+  });
+
   it("reports duplicate Requirements, Scenarios, and Cases", () => {
     const manifest = validManifest
       .replace(
@@ -225,6 +268,46 @@ describe("manifest parsing and validation", () => {
       assert.deepEqual((await validateProjectDirectory(directory)).errors, []);
     } finally {
       await rm(directory, { recursive: true });
+    }
+  });
+
+  it("rejects a manifest symlink that resolves outside the project", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "moura-test-"));
+    const directory = join(parent, "project");
+    try {
+      await mkdir(directory);
+      await writeFile(join(parent, "outside.yaml"), validManifest);
+      await symlink(
+        join(parent, "outside.yaml"),
+        join(directory, "moura.yaml"),
+      );
+      const result = await validateProjectDirectory(directory);
+      assert.ok(
+        result.errors.some((item) => item.code === "invalid-source-path"),
+      );
+    } finally {
+      await rm(parent, { recursive: true });
+    }
+  });
+
+  it("allows a manifest symlink that resolves inside the real project root", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "moura-test-"));
+    const directory = join(parent, "project");
+    const linkedDirectory = join(parent, "linked-project");
+    try {
+      await mkdir(directory);
+      await mkdir(join(directory, "config"));
+      await writeFile(join(directory, "config", "moura.yaml"), validManifest);
+      await symlink("config/moura.yaml", join(directory, "moura.yaml"));
+      await writeFile(join(directory, "req.md"), validRequirement);
+      await writeFile(join(directory, "spec.md"), validSpecification);
+      await symlink(directory, linkedDirectory);
+      assert.deepEqual(
+        (await validateProjectDirectory(linkedDirectory)).errors,
+        [],
+      );
+    } finally {
+      await rm(parent, { recursive: true });
     }
   });
 
