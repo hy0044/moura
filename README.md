@@ -79,7 +79,7 @@ Canonical IDs are intentionally omitted and derived from the nesting. Layer name
 moura validate [directory] # validate moura.yaml and its configured Markdown sources
 ```
 
-Run `moura validate` in a project root, or pass the project directory explicitly. Evidence ingestion, `check`, `report`, and an Allure adapter remain future work.
+Run `moura validate` to validate the current working directory, or pass a relative or absolute project directory explicitly. Relative paths are resolved from the current working directory. Evidence ingestion, `check`, `report`, and an Allure adapter remain future work.
 
 ## Development
 
