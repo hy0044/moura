@@ -477,6 +477,21 @@ describe("Markdown hierarchy and canonical matching", () => {
     );
   });
 
+  it("does not use a reserved prefix as a manifest node kind", () => {
+    const manifest = validManifest
+      .replace("REQ-001", "SCN-requirement")
+      .replace("SCN-001", "CASE-scenario")
+      .replace("CASE-001", "REQ-case");
+    assert.deepEqual(
+      validate(
+        manifest,
+        "## SCN-requirement Requirement\n",
+        "## SCN-requirement\n### CASE-scenario\n#### REQ-case\n",
+      ).errors,
+      [],
+    );
+  });
+
   it("does not let child IDs in a requirement source satisfy specification hierarchy", () => {
     const requirement = `${validRequirement}
 ## SCN-001 Misplaced scenario

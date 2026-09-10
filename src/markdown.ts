@@ -32,21 +32,15 @@ export function parseRequirementMarkdown(
   source: string,
   manifest: MouraManifest,
 ): ValidationResult<readonly string[]> {
-  const expected = new Set(manifest.requirements.map((item) => item.localId));
-  const declared = new Set(
-    manifest.requirements.flatMap((requirement) => [
-      requirement.localId,
-      ...requirement.scenarios.flatMap((scenario) => [
-        scenario.localId,
-        ...scenario.cases.map((testCase) => testCase.localId),
-      ]),
-    ]),
+  const requirementIds = new Set(
+    manifest.requirements.map((item) => item.localId),
   );
+  const managedIds = manifestManagedIds(manifest);
   const requirements = headings(text)
     .filter(
       ({ token }) =>
-        expected.has(token) ||
-        (hasReservedIdPrefix(token) && !declared.has(token)),
+        requirementIds.has(token) ||
+        (hasReservedIdPrefix(token) && !managedIds.has(token)),
     )
     .map(({ token }) => token);
   return { value: requirements, errors: [] };
@@ -71,7 +65,7 @@ export function parseSpecificationMarkdown(
       ),
     ),
   );
-  const declaredIds = new Set([...reqIds, ...scnIds, ...caseIds]);
+  const declaredIds = manifestManagedIds(manifest);
   const result: { id: string; scenarios: { id: string; cases: string[] }[] }[] =
     [];
   let currentRequirement: (typeof result)[number] | undefined;
@@ -218,4 +212,20 @@ function classify(
 
 function hasReservedIdPrefix(token: string): boolean {
   return RESERVED_ID_PREFIXES.some((prefix) => token.startsWith(prefix));
+}
+
+/**
+ * Classifies whether a token is managed by the manifest, independently of the
+ * source role and hierarchy checks that determine where that node may occur.
+ */
+function manifestManagedIds(manifest: MouraManifest): Set<string> {
+  return new Set(
+    manifest.requirements.flatMap((requirement) => [
+      requirement.localId,
+      ...requirement.scenarios.flatMap((scenario) => [
+        scenario.localId,
+        ...scenario.cases.map((testCase) => testCase.localId),
+      ]),
+    ]),
+  );
 }
