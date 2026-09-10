@@ -52,6 +52,7 @@ export function parseManifest(
     root,
     ["version", "sources", "verification", "requirements"],
     source,
+    source,
     errors,
   );
   const version = scalar(root, "version");
@@ -63,42 +64,47 @@ export function parseManifest(
     );
   }
 
-  const sourcesNode = map(root, "sources", source, errors);
+  const sourcesNode = map(root, "sources", source, source, errors);
   if (sourcesNode)
     unknownFields(
       sourcesNode,
       ["requirements", "specifications"],
       "sources",
+      source,
       errors,
     );
   const requirementSources = stringList(
     sourcesNode,
     "requirements",
     "sources.requirements",
+    source,
     errors,
   );
   const specificationSources = stringList(
     sourcesNode,
     "specifications",
     "sources.specifications",
+    source,
     errors,
   );
 
-  const verification = map(root, "verification", source, errors);
+  const verification = map(root, "verification", source, source, errors);
   if (verification)
-    unknownFields(verification, ["layers"], "verification", errors);
+    unknownFields(verification, ["layers"], "verification", source, errors);
   const layers = stringList(
     verification,
     "layers",
     "verification.layers",
+    source,
     errors,
   );
   const requirements = objectList(
     root,
     "requirements",
     "requirements",
+    source,
     errors,
-  ).map((node, index) => requirement(node, index, errors));
+  ).map((node, index) => requirement(node, index, source, errors));
 
   const value: MouraManifest = {
     version: typeof version === "number" ? version : 0,
@@ -115,15 +121,22 @@ export function parseManifest(
 function requirement(
   node: Map,
   index: number,
+  source: string,
   errors: ValidationError[],
 ): RequirementNode {
   const path = `requirements[${index}]`;
-  unknownFields(node, ["id", "scenarios"], path, errors);
+  unknownFields(node, ["id", "scenarios"], path, source, errors);
   return {
     kind: "requirement",
-    localId: stringValue(node, "id", `${path}.id`, errors),
-    scenarios: objectList(node, "scenarios", `${path}.scenarios`, errors).map(
-      (item, child) => scenario(item, `${path}.scenarios[${child}]`, errors),
+    localId: stringValue(node, "id", `${path}.id`, source, errors),
+    scenarios: objectList(
+      node,
+      "scenarios",
+      `${path}.scenarios`,
+      source,
+      errors,
+    ).map((item, child) =>
+      scenario(item, `${path}.scenarios[${child}]`, source, errors),
     ),
   };
 }
@@ -131,14 +144,16 @@ function requirement(
 function scenario(
   node: Map,
   path: string,
+  source: string,
   errors: ValidationError[],
 ): ScenarioNode {
-  unknownFields(node, ["id", "cases"], path, errors);
+  unknownFields(node, ["id", "cases"], path, source, errors);
   return {
     kind: "scenario",
-    localId: stringValue(node, "id", `${path}.id`, errors),
-    cases: objectList(node, "cases", `${path}.cases`, errors).map(
-      (item, child) => testCase(item, `${path}.cases[${child}]`, errors),
+    localId: stringValue(node, "id", `${path}.id`, source, errors),
+    cases: objectList(node, "cases", `${path}.cases`, source, errors).map(
+      (item, child) =>
+        testCase(item, `${path}.cases[${child}]`, source, errors),
     ),
   };
 }
@@ -146,13 +161,14 @@ function scenario(
 function testCase(
   node: Map,
   path: string,
+  source: string,
   errors: ValidationError[],
 ): CaseNode {
-  unknownFields(node, ["id", "verify"], path, errors);
+  unknownFields(node, ["id", "verify"], path, source, errors);
   return {
     kind: "case",
-    localId: stringValue(node, "id", `${path}.id`, errors),
-    verify: stringList(node, "verify", `${path}.verify`, errors),
+    localId: stringValue(node, "id", `${path}.id`, source, errors),
+    verify: stringList(node, "verify", `${path}.verify`, source, errors),
   };
 }
 
@@ -160,13 +176,14 @@ function map(
   parent: Map,
   key: string,
   path: string,
+  source: string,
   errors: ValidationError[],
 ): Map | undefined {
   const value = parent.get(key, true);
   if (!(value instanceof YAMLMap)) {
     errors.push(
       error("invalid-manifest", `${path}.${key} must be a mapping`, {
-        source: "moura.yaml",
+        source,
       }),
     );
     return undefined;
@@ -178,13 +195,14 @@ function objectList(
   parent: Map | undefined,
   key: string,
   path: string,
+  source: string,
   errors: ValidationError[],
 ): Map[] {
   const value = parent?.get(key, true);
   if (!(value instanceof YAMLSeq)) {
     errors.push(
       error("invalid-manifest", `${path} must be a list`, {
-        source: "moura.yaml",
+        source,
       }),
     );
     return [];
@@ -195,7 +213,7 @@ function objectList(
     else
       errors.push(
         error("invalid-manifest", `${path}[${index}] must be a mapping`, {
-          source: "moura.yaml",
+          source,
         }),
       );
   });
@@ -206,13 +224,14 @@ function stringList(
   parent: Map | undefined,
   key: string,
   path: string,
+  source: string,
   errors: ValidationError[],
 ): string[] {
   const value = parent?.get(key, true);
   if (!(value instanceof YAMLSeq)) {
     errors.push(
       error("invalid-manifest", `${path} must be a list`, {
-        source: "moura.yaml",
+        source,
       }),
     );
     return [];
@@ -224,7 +243,7 @@ function stringList(
     else
       errors.push(
         error("invalid-manifest", `${path}[${index}] must be a string`, {
-          source: "moura.yaml",
+          source,
         }),
       );
   });
@@ -235,13 +254,14 @@ function stringValue(
   parent: Map,
   key: string,
   path: string,
+  source: string,
   errors: ValidationError[],
 ): string {
   const value = scalar(parent, key);
   if (typeof value !== "string") {
     errors.push(
       error("invalid-manifest", `${path} must be a string`, {
-        source: "moura.yaml",
+        source,
       }),
     );
     return "";
@@ -261,6 +281,7 @@ function unknownFields(
   node: Map,
   allowed: readonly string[],
   path: string,
+  source: string,
   errors: ValidationError[],
 ): void {
   for (const pair of node.items) {
@@ -270,7 +291,7 @@ function unknownFields(
         error(
           "unknown-field",
           `${path} contains unknown field ${JSON.stringify(key)}`,
-          { source: "moura.yaml" },
+          { source },
         ),
       );
     }

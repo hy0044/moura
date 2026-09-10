@@ -67,7 +67,20 @@ export async function validateProjectDirectory(
   const manifestPath = resolve(directory, "moura.yaml");
   let manifest: string;
   try {
-    manifest = await readFile(manifestPath, "utf8");
+    const projectRoot = await realpath(resolve(directory));
+    const realManifestPath = await realpath(manifestPath);
+    if (!isWithin(projectRoot, realManifestPath)) {
+      return {
+        errors: [
+          error(
+            "invalid-source-path",
+            "Configured manifest source moura.yaml must remain within the project directory",
+            { source: "moura.yaml" },
+          ),
+        ],
+      };
+    }
+    manifest = await readFile(realManifestPath, "utf8");
   } catch (cause) {
     return { errors: [readError("moura.yaml", cause)] };
   }
@@ -108,13 +121,10 @@ async function load(
   const projectRoot = await realpath(resolve(directory));
   for (const path of paths) {
     const targetPath = resolve(projectRoot, path);
-    const relativePath = relative(projectRoot, targetPath);
     if (
       isAbsolute(path) ||
       win32.isAbsolute(path) ||
-      relativePath === ".." ||
-      relativePath.startsWith(`..${sep}`) ||
-      isAbsolute(relativePath)
+      !isWithin(projectRoot, targetPath)
     ) {
       errors.push(
         error(
@@ -127,12 +137,7 @@ async function load(
     }
     try {
       const realTargetPath = await realpath(targetPath);
-      const realRelativePath = relative(projectRoot, realTargetPath);
-      if (
-        realRelativePath === ".." ||
-        realRelativePath.startsWith(`..${sep}`) ||
-        isAbsolute(realRelativePath)
-      ) {
+      if (!isWithin(projectRoot, realTargetPath)) {
         errors.push(
           error(
             "invalid-source-path",
@@ -148,6 +153,16 @@ async function load(
     }
   }
 }
+
+function isWithin(projectRoot: string, targetPath: string): boolean {
+  const relativePath = relative(projectRoot, targetPath);
+  return (
+    relativePath !== ".." &&
+    !relativePath.startsWith(`..${sep}`) &&
+    !isAbsolute(relativePath)
+  );
+}
+
 function readError(
   path: string,
   cause: unknown,
