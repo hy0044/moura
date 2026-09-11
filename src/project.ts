@@ -71,7 +71,7 @@ function missingSource(path: string, kind: string): ValidationError {
 function invalidSourcePath(path: string, kind: string): ValidationError {
   return error(
     "invalid-source-path",
-    `Configured ${kind} source ${path} must be project-relative`,
+    `Configured ${kind} source ${path} must be a project-relative file path`,
     { source: path },
   );
 }
@@ -80,8 +80,13 @@ function isValidProjectRelativeSourcePath(path: string): boolean {
   if (isAbsolute(path) || win32.isAbsolute(path) || /^[a-z]:/iu.test(path))
     return false;
 
+  const segments = path.split(/[\\/]/u);
+  const finalSegment = segments.at(-1);
+  if (finalSegment === "" || finalSegment === "." || finalSegment === "..")
+    return false;
+
   let depth = 0;
-  for (const segment of path.split(/[\\/]+/u)) {
+  for (const segment of segments) {
     if (segment === "" || segment === ".") continue;
     if (segment === "..") {
       if (depth === 0) return false;

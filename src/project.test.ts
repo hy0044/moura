@@ -340,6 +340,11 @@ requirements:
       ["requirement", "./"],
       ["requirement", "docs/.."],
       ["requirement", "docs/sub/../.."],
+      ["requirement", "req.md/"],
+      ["requirement", "docs/"],
+      ["requirement", "docs/."],
+      ["requirement", "docs/sub/."],
+      ["requirement", "docs/../"],
       ["requirement", "C:docs/req.md"],
       ["requirement", "C:\\docs\\req.md"],
       ["requirement", "C:/docs/req.md"],
@@ -402,6 +407,11 @@ requirements:
         "./",
         "docs/..",
         "docs/sub/../..",
+        "req.md/",
+        "docs/",
+        "docs/.",
+        "docs/sub/.",
+        "docs/../",
         "C:docs/req.md",
       ]) {
         await writeFile(
