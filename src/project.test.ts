@@ -335,6 +335,11 @@ requirements:
       ["requirement", "../../req.md"],
       ["requirement", "../project/req.md"],
       ["requirement", "docs/../../req.md"],
+      ["requirement", ""],
+      ["requirement", "."],
+      ["requirement", "./"],
+      ["requirement", "docs/.."],
+      ["requirement", "docs/sub/../.."],
       ["requirement", "C:docs/req.md"],
       ["requirement", "C:\\docs\\req.md"],
       ["requirement", "C:/docs/req.md"],
@@ -344,7 +349,7 @@ requirements:
     for (const [kind, source] of cases) {
       const manifest = validManifest.replace(
         kind === "requirement" ? "req.md" : "spec.md",
-        source,
+        JSON.stringify(source),
       );
       const result = validateProject({
         manifest,
@@ -368,11 +373,13 @@ requirements:
   it("accepts normalized project-relative source paths", () => {
     for (const source of [
       "req.md",
+      "./req.md",
       "docs/req.md",
       "docs/specifications/spec.md",
       "docs/../req.md",
+      "docs/sub/../req.md",
     ]) {
-      const manifest = validManifest.replace("req.md", source);
+      const manifest = validManifest.replace("req.md", JSON.stringify(source));
       const result = validateProject({
         manifest,
         requirementSources: new Map([[source, validRequirement]]),
@@ -390,11 +397,16 @@ requirements:
         "../req.md",
         "../project/req.md",
         "docs/../../req.md",
+        "",
+        ".",
+        "./",
+        "docs/..",
+        "docs/sub/../..",
         "C:docs/req.md",
       ]) {
         await writeFile(
           join(directory, "moura.yaml"),
-          validManifest.replace("req.md", source),
+          validManifest.replace("req.md", JSON.stringify(source)),
         );
         const result = await validateProjectDirectory(directory);
         assert.equal(
