@@ -79,13 +79,19 @@ describe("CLI", () => {
     }
   });
 
-  it("preserves help and version behavior", () => {
+  it("lists validate as available and only unimplemented commands as planned", () => {
+    for (const args of [[], ["--help"]]) {
+      const help = run(args, process.cwd());
+      assert.equal(help.status, 0, help.stderr);
+      assert.match(help.stdout, /^Available commands: validate\.$/mu);
+      assert.match(help.stdout, /^Planned commands: check, report\.$/mu);
+      assert.doesNotMatch(help.stdout, /^Planned commands:.*validate/mu);
+    }
+  });
+
+  it("preserves version behavior", () => {
     const version = run(["--version"], process.cwd());
     assert.equal(version.status, 0, version.stderr);
     assert.match(version.stdout, /moura 0\.1\.0/u);
-
-    const help = run(["--help"], process.cwd());
-    assert.equal(help.status, 0, help.stderr);
-    assert.match(help.stdout, /Moura is in early development/u);
   });
 });

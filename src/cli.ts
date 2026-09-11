@@ -24,7 +24,11 @@ if (command === "--version" || command === "-v") {
   }
 } else {
   console.log(
-    "Moura is in early development. Planned commands: validate, check, report.",
+    [
+      "Moura is in early development.",
+      "Available commands: validate.",
+      "Planned commands: check, report.",
+    ].join("\n"),
   );
   if (command && command !== "--help" && command !== "-h") {
     process.exitCode = 1;
