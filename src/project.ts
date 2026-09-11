@@ -90,7 +90,7 @@ function isValidProjectRelativeSourcePath(path: string): boolean {
       depth += 1;
     }
   }
-  return true;
+  return depth > 0;
 }
 
 /** Filesystem adapter used by the CLI; integrations can use validateProject directly. */
