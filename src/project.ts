@@ -27,7 +27,7 @@ export function validateProject(input: ProjectInput): ValidationResult {
   const requirements = new Map<string, readonly string[]>();
   const specifications = new Map();
   for (const source of parsed.value.sources.requirements) {
-    if (!isProjectRelative(source)) {
+    if (!isValidProjectRelativeSourcePath(source)) {
       errors.push(invalidSourcePath(source, "requirement"));
       continue;
     }
@@ -41,7 +41,7 @@ export function validateProject(input: ProjectInput): ValidationResult {
     if (result.value) requirements.set(source, result.value);
   }
   for (const source of parsed.value.sources.specifications) {
-    if (!isProjectRelative(source)) {
+    if (!isValidProjectRelativeSourcePath(source)) {
       errors.push(invalidSourcePath(source, "specification"));
       continue;
     }
@@ -76,21 +76,21 @@ function invalidSourcePath(path: string, kind: string): ValidationError {
   );
 }
 
-function isProjectRelative(path: string): boolean {
-  if (isAbsolute(path) || win32.isAbsolute(path)) return false;
+function isValidProjectRelativeSourcePath(path: string): boolean {
+  if (isAbsolute(path) || win32.isAbsolute(path) || /^[a-z]:/iu.test(path))
+    return false;
 
-  const nativeRoot = resolve("/project");
-  const nativePath = resolve(nativeRoot, path);
-  if (!isWithin(nativeRoot, nativePath)) return false;
-
-  const windowsRoot = "C:\\project";
-  const windowsPath = win32.resolve(windowsRoot, path);
-  const windowsRelative = win32.relative(windowsRoot, windowsPath);
-  return (
-    windowsRelative !== ".." &&
-    !windowsRelative.startsWith(`..${win32.sep}`) &&
-    !win32.isAbsolute(windowsRelative)
-  );
+  let depth = 0;
+  for (const segment of path.split(/[\\/]+/u)) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      if (depth === 0) return false;
+      depth -= 1;
+    } else {
+      depth += 1;
+    }
+  }
+  return true;
 }
 
 /** Filesystem adapter used by the CLI; integrations can use validateProject directly. */
@@ -153,12 +153,12 @@ async function load(
 ): Promise<void> {
   const projectRoot = await realpath(resolve(directory));
   for (const path of paths) {
+    // Core validation owns the manifest diagnostic. The adapter only skips the
+    // unsafe read here so validateProject reports that contract error once.
+    if (!isValidProjectRelativeSourcePath(path)) continue;
+
     const targetPath = resolve(projectRoot, path);
-    if (
-      isAbsolute(path) ||
-      win32.isAbsolute(path) ||
-      !isWithin(projectRoot, targetPath)
-    ) {
+    if (!isWithin(projectRoot, targetPath)) {
       errors.push(
         error(
           "invalid-source-path",

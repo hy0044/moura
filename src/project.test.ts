@@ -230,8 +230,10 @@ requirements:
         const manifest = validManifest.replace("req.md", source);
         await writeFile(join(directory, "moura.yaml"), manifest);
         const result = await validateProjectDirectory(directory);
-        assert.ok(
-          result.errors.some((item) => item.code === "invalid-source-path"),
+        assert.equal(
+          result.errors.filter((item) => item.code === "invalid-source-path")
+            .length,
+          1,
           source,
         );
       }
@@ -330,7 +332,13 @@ requirements:
       ["requirement", "/absolute/req.md"],
       ["specification", "/absolute/spec.md"],
       ["requirement", "../req.md"],
-      ["specification", "../../spec.md"],
+      ["requirement", "../../req.md"],
+      ["requirement", "../project/req.md"],
+      ["requirement", "docs/../../req.md"],
+      ["requirement", "C:docs/req.md"],
+      ["requirement", "C:\\docs\\req.md"],
+      ["requirement", "C:/docs/req.md"],
+      ["specification", "D:spec.md"],
     ] as const;
 
     for (const [kind, source] of cases) {
@@ -357,18 +365,50 @@ requirements:
     }
   });
 
-  it("accepts nested project-relative source paths", () => {
-    const manifest = validManifest
-      .replace("req.md", "docs/requirements.md")
-      .replace("spec.md", "specifications/spec.md");
-    const result = validateProject({
-      manifest,
-      requirementSources: new Map([["docs/requirements.md", validRequirement]]),
-      specificationSources: new Map([
-        ["specifications/spec.md", validSpecification],
-      ]),
-    });
-    assert.deepEqual(result.errors, []);
+  it("accepts normalized project-relative source paths", () => {
+    for (const source of [
+      "req.md",
+      "docs/req.md",
+      "docs/specifications/spec.md",
+      "docs/../req.md",
+    ]) {
+      const manifest = validManifest.replace("req.md", source);
+      const result = validateProject({
+        manifest,
+        requirementSources: new Map([[source, validRequirement]]),
+        specificationSources: new Map([["spec.md", validSpecification]]),
+      });
+      assert.deepEqual(result.errors, [], source);
+    }
+  });
+
+  it("reports one contract diagnostic per unsafe directory source", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
+    try {
+      await writeFile(join(directory, "spec.md"), validSpecification);
+      for (const source of [
+        "../req.md",
+        "../project/req.md",
+        "docs/../../req.md",
+        "C:docs/req.md",
+      ]) {
+        await writeFile(
+          join(directory, "moura.yaml"),
+          validManifest.replace("req.md", source),
+        );
+        const result = await validateProjectDirectory(directory);
+        assert.equal(
+          result.errors.filter(
+            (item) =>
+              item.code === "invalid-source-path" && item.source === source,
+          ).length,
+          1,
+          source,
+        );
+      }
+    } finally {
+      await rm(directory, { recursive: true });
+    }
   });
 
   it("collects multiple independent errors", () => {
