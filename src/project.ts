@@ -27,6 +27,10 @@ export function validateProject(input: ProjectInput): ValidationResult {
   const requirements = new Map<string, readonly string[]>();
   const specifications = new Map();
   for (const source of parsed.value.sources.requirements) {
+    if (!isProjectRelative(source)) {
+      errors.push(invalidSourcePath(source, "requirement"));
+      continue;
+    }
     const text = input.requirementSources.get(source);
     if (text === undefined) {
       errors.push(missingSource(source, "requirement"));
@@ -37,6 +41,10 @@ export function validateProject(input: ProjectInput): ValidationResult {
     if (result.value) requirements.set(source, result.value);
   }
   for (const source of parsed.value.sources.specifications) {
+    if (!isProjectRelative(source)) {
+      errors.push(invalidSourcePath(source, "specification"));
+      continue;
+    }
     const text = input.specificationSources.get(source);
     if (text === undefined) {
       errors.push(missingSource(source, "specification"));
@@ -57,6 +65,31 @@ function missingSource(path: string, kind: string): ValidationError {
     "missing-source",
     `Configured ${kind} source ${path} was not provided`,
     { source: path },
+  );
+}
+
+function invalidSourcePath(path: string, kind: string): ValidationError {
+  return error(
+    "invalid-source-path",
+    `Configured ${kind} source ${path} must be project-relative`,
+    { source: path },
+  );
+}
+
+function isProjectRelative(path: string): boolean {
+  if (isAbsolute(path) || win32.isAbsolute(path)) return false;
+
+  const nativeRoot = resolve("/project");
+  const nativePath = resolve(nativeRoot, path);
+  if (!isWithin(nativeRoot, nativePath)) return false;
+
+  const windowsRoot = "C:\\project";
+  const windowsPath = win32.resolve(windowsRoot, path);
+  const windowsRelative = win32.relative(windowsRoot, windowsPath);
+  return (
+    windowsRelative !== ".." &&
+    !windowsRelative.startsWith(`..${win32.sep}`) &&
+    !win32.isAbsolute(windowsRelative)
   );
 }
 

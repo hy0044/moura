@@ -325,6 +325,52 @@ requirements:
     );
   });
 
+  it("rejects non-project-relative paths before source-map lookup", () => {
+    const cases = [
+      ["requirement", "/absolute/req.md"],
+      ["specification", "/absolute/spec.md"],
+      ["requirement", "../req.md"],
+      ["specification", "../../spec.md"],
+    ] as const;
+
+    for (const [kind, source] of cases) {
+      const manifest = validManifest.replace(
+        kind === "requirement" ? "req.md" : "spec.md",
+        source,
+      );
+      const result = validateProject({
+        manifest,
+        requirementSources: new Map([
+          [kind === "requirement" ? source : "req.md", validRequirement],
+        ]),
+        specificationSources: new Map([
+          [kind === "specification" ? source : "spec.md", validSpecification],
+        ]),
+      });
+      assert.ok(
+        result.errors.some(
+          (item) =>
+            item.code === "invalid-source-path" && item.source === source,
+        ),
+        `${kind} source ${source}`,
+      );
+    }
+  });
+
+  it("accepts nested project-relative source paths", () => {
+    const manifest = validManifest
+      .replace("req.md", "docs/requirements.md")
+      .replace("spec.md", "specifications/spec.md");
+    const result = validateProject({
+      manifest,
+      requirementSources: new Map([["docs/requirements.md", validRequirement]]),
+      specificationSources: new Map([
+        ["specifications/spec.md", validSpecification],
+      ]),
+    });
+    assert.deepEqual(result.errors, []);
+  });
+
   it("collects multiple independent errors", () => {
     const found = codes(
       validManifest
