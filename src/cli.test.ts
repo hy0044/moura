@@ -1,12 +1,8 @@
-import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { describe, it } from "node:test";
+import { describe, expect, it, vi } from "vitest";
 
-const cliPath = fileURLToPath(new URL("./cli.js", import.meta.url));
 const validManifest = `
 version: 1
 sources:
@@ -23,11 +19,37 @@ requirements:
             verify: [unit]
 `;
 
-function run(args: readonly string[], cwd: string) {
-  return spawnSync(process.execPath, [cliPath, ...args], {
-    cwd,
-    encoding: "utf8",
-  });
+async function run(args: readonly string[], cwd: string) {
+  const originalArgv = process.argv;
+  const originalCwd = process.cwd();
+  const originalExitCode = process.exitCode;
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const log = vi
+    .spyOn(console, "log")
+    .mockImplementation((...values) => stdout.push(values.join(" ")));
+  const error = vi
+    .spyOn(console, "error")
+    .mockImplementation((...values) => stderr.push(values.join(" ")));
+
+  try {
+    process.argv = [process.execPath, "moura", ...args];
+    process.chdir(cwd);
+    process.exitCode = undefined;
+    vi.resetModules();
+    await import("./cli.js");
+    return {
+      status: process.exitCode ?? 0,
+      stdout: `${stdout.join("\n")}\n`,
+      stderr: `${stderr.join("\n")}\n`,
+    };
+  } finally {
+    process.argv = originalArgv;
+    process.chdir(originalCwd);
+    process.exitCode = originalExitCode;
+    log.mockRestore();
+    error.mockRestore();
+  }
 }
 
 async function writeValidProject(directory: string): Promise<void> {
@@ -47,9 +69,9 @@ describe("CLI", () => {
     const directory = await mkdtemp(join(tmpdir(), "moura-cli-test-"));
     try {
       await writeValidProject(directory);
-      const result = run(["validate"], directory);
-      assert.equal(result.status, 0, result.stderr);
-      assert.match(result.stdout, /Traceability is valid/u);
+      const result = await run(["validate"], directory);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toMatch(/Traceability is valid/u);
     } finally {
       await rm(directory, { recursive: true });
     }
@@ -59,9 +81,9 @@ describe("CLI", () => {
     const directory = await mkdtemp(join(tmpdir(), "moura-cli-test-"));
     try {
       await writeValidProject(join(directory, "valid-project"));
-      const result = run(["validate", "valid-project"], directory);
-      assert.equal(result.status, 0, result.stderr);
-      assert.match(result.stdout, /Traceability is valid/u);
+      const result = await run(["validate", "valid-project"], directory);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toMatch(/Traceability is valid/u);
     } finally {
       await rm(directory, { recursive: true });
     }
@@ -70,28 +92,28 @@ describe("CLI", () => {
   it("fails for a missing project directory", async () => {
     const directory = await mkdtemp(join(tmpdir(), "moura-cli-test-"));
     try {
-      const result = run(["validate", "missing-project"], directory);
-      assert.equal(result.status, 1);
-      assert.match(result.stderr, /validation failed/u);
-      assert.match(result.stderr, /Cannot read configured manifest source/u);
+      const result = await run(["validate", "missing-project"], directory);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toMatch(/validation failed/u);
+      expect(result.stderr).toMatch(/Cannot read configured manifest source/u);
     } finally {
       await rm(directory, { recursive: true });
     }
   });
 
-  it("lists validate as available and only unimplemented commands as planned", () => {
+  it("lists validate as available and only unimplemented commands as planned", async () => {
     for (const args of [[], ["--help"]]) {
-      const help = run(args, process.cwd());
-      assert.equal(help.status, 0, help.stderr);
-      assert.match(help.stdout, /^Available commands: validate\.$/mu);
-      assert.match(help.stdout, /^Planned commands: check, report\.$/mu);
-      assert.doesNotMatch(help.stdout, /^Planned commands:.*validate/mu);
+      const help = await run(args, process.cwd());
+      expect(help.status, help.stderr).toBe(0);
+      expect(help.stdout).toMatch(/^Available commands: validate\.$/mu);
+      expect(help.stdout).toMatch(/^Planned commands: check, report\.$/mu);
+      expect(help.stdout).not.toMatch(/^Planned commands:.*validate/mu);
     }
   });
 
-  it("preserves version behavior", () => {
-    const version = run(["--version"], process.cwd());
-    assert.equal(version.status, 0, version.stderr);
-    assert.match(version.stdout, /moura 0\.1\.0/u);
+  it("preserves version behavior", async () => {
+    const version = await run(["--version"], process.cwd());
+    expect(version.status, version.stderr).toBe(0);
+    expect(version.stdout).toMatch(/moura 0\.1\.0/u);
   });
 });

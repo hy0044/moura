@@ -18,13 +18,13 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "pnpm build && node --test dist/*.test.js",
+    "test": "vitest run",
     "prepack": "pnpm build"
   },
   "devDependencies": {
@@ -34,7 +34,8 @@
     "eslint": "^10.10.0",
     "prettier": "^3.9.6",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.69.0"
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "remark-parse": "^11.0.0",

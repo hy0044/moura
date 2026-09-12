@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import { parseManifest } from "./manifest.js";
 import { parseSpecificationMarkdown } from "./markdown.js";
@@ -107,34 +106,34 @@ function codes(
 describe("manifest parsing and validation", () => {
   it("enforces the configured source path contract", () => {
     for (const testCase of sourcePathCases) {
-      assert.equal(
+      expect(
         isValidProjectRelativeSourcePath(testCase.path),
-        testCase.valid,
         `${testCase.category}: ${JSON.stringify(testCase.path)}`,
-      );
+      ).toBe(testCase.valid);
     }
   });
 
-  it("accepts a valid manifest", () => assert.deepEqual(validate().errors, []));
+  it("accepts a valid manifest", () => expect(validate().errors).toEqual([]));
 
   it("rejects a missing or unsupported version", () => {
-    assert.ok(
+    expect(
       codes(validManifest.replace("version: 1", "version: 2")).includes(
         "unsupported-version",
       ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       codes(validManifest.replace("version: 1\n", "")).includes(
         "unsupported-version",
       ),
-    );
+    ).toBeTruthy();
   });
 
   it("rejects duplicate YAML mapping keys", () => {
     const result = parseManifest(`version: 1\nversion: 1\n`);
-    assert.ok(result.errors.some((item) => item.code === "invalid-yaml"));
-    assert.match(
-      result.errors[0]?.message ?? "",
+    expect(
+      result.errors.some((item) => item.code === "invalid-yaml"),
+    ).toBeTruthy();
+    expect(result.errors[0]?.message ?? "").toMatch(
       /unique|map keys|duplicate/iu,
     );
   });
@@ -166,20 +165,25 @@ requirements:
       "config/custom.yaml",
     );
     const errors = [...nested.errors, ...missingMappings.errors];
-    assert.ok(errors.length > 0);
-    assert.ok(errors.some((item) => item.code === "unsupported-version"));
-    assert.ok(errors.some((item) => item.code === "unknown-field"));
-    assert.ok(errors.some((item) => item.code === "invalid-manifest"));
-    assert.deepEqual(
-      new Set(errors.map((item) => item.source)),
+    expect(errors.length > 0).toBeTruthy();
+    expect(
+      errors.some((item) => item.code === "unsupported-version"),
+    ).toBeTruthy();
+    expect(errors.some((item) => item.code === "unknown-field")).toBeTruthy();
+    expect(
+      errors.some((item) => item.code === "invalid-manifest"),
+    ).toBeTruthy();
+    expect(new Set(errors.map((item) => item.source))).toEqual(
       new Set(["config/custom.yaml"]),
     );
   });
 
   it("keeps moura.yaml as the default manifest error source", () => {
     const result = parseManifest("version: 2\n");
-    assert.ok(result.errors.length > 0);
-    assert.ok(result.errors.every((item) => item.source === "moura.yaml"));
+    expect(result.errors.length > 0).toBeTruthy();
+    expect(
+      result.errors.every((item) => item.source === "moura.yaml"),
+    ).toBeTruthy();
   });
 
   describe("YAML features in the v0.1 manifest contract", () => {
@@ -211,8 +215,10 @@ requirements:
         const aliasErrors = result.errors.filter(
           (item) => item.code === "unsupported-yaml-alias",
         );
-        assert.equal(aliasErrors.length, 1);
-        assert.match(aliasErrors[0]?.message ?? "", /unsupported YAML alias/u);
+        expect(aliasErrors.length).toBe(1);
+        expect(aliasErrors[0]?.message ?? "").toMatch(
+          /unsupported YAML alias/u,
+        );
       });
     }
 
@@ -220,13 +226,13 @@ requirements:
       const result = parseManifest(
         validManifest.replace("  layers: [unit]", "  layers: &layers [unit]"),
       );
-      assert.ok(
+      expect(
         result.errors.some((item) => item.code === "unsupported-yaml-anchor"),
-      );
+      ).toBeTruthy();
     });
 
     it("continues to accept a normal manifest", () => {
-      assert.deepEqual(parseManifest(validManifest).errors, []);
+      expect(parseManifest(validManifest).errors).toEqual([]);
     });
   });
 
@@ -245,77 +251,77 @@ requirements:
         "          - id: CASE-001\n            verify: [unit]\n          - id: CASE-001",
       );
     const found = codes(manifest);
-    assert.ok(found.includes("duplicate-requirement"));
-    assert.ok(found.includes("duplicate-scenario"));
-    assert.ok(found.includes("duplicate-case"));
+    expect(found.includes("duplicate-requirement")).toBeTruthy();
+    expect(found.includes("duplicate-scenario")).toBeTruthy();
+    expect(found.includes("duplicate-case")).toBeTruthy();
   });
 
   it("reports missing Scenario, Case, and verify lists", () => {
-    assert.ok(
+    expect(
       codes(
         validManifest.replace(/ {4}scenarios:[\s\S]*$/u, "    scenarios: []\n"),
       ).includes("missing-scenario"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       codes(
         validManifest.replace(/ {8}cases:[\s\S]*$/u, "        cases: []\n"),
       ).includes("missing-case"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       codes(
         validManifest.replace(
           "            verify: [unit]",
           "            verify: []",
         ),
       ).includes("missing-verify"),
-    );
+    ).toBeTruthy();
   });
 
   it("reports unknown and duplicate verification layers", () => {
-    assert.ok(
+    expect(
       codes(
         validManifest.replace("verify: [unit]", "verify: [other]"),
       ).includes("unknown-verification-layer"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       codes(
         validManifest.replace("layers: [unit]", "layers: [unit, unit]"),
       ).includes("duplicate-verification-layer"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       codes(
         validManifest.replace("verify: [unit]", "verify: [unit, unit]"),
       ).includes("duplicate-verify-layer"),
-    );
+    ).toBeTruthy();
   });
 
   it("uses localId validation including Unicode White_Space", () => {
-    assert.ok(
+    expect(
       codes(validManifest.replace("REQ-001", "BAD/ID")).includes(
         "invalid-local-id",
       ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       codes(validManifest.replace("SCN-001", "SCN-\u0085001")).includes(
         "invalid-local-id",
       ),
-    );
+    ).toBeTruthy();
   });
 
   it("requires requirement and specification source entries", () => {
-    assert.ok(
+    expect(
       codes(
         validManifest.replace("requirements: [req.md]", "requirements: []"),
       ).includes("missing-requirement-source"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       codes(
         validManifest.replace(
           "specifications: [spec.md]",
           "specifications: []",
         ),
       ).includes("missing-specification-source"),
-    );
+    ).toBeTruthy();
   });
 
   it("reports configured source files that cannot be read", async () => {
@@ -323,11 +329,10 @@ requirements:
     try {
       await writeFile(join(directory, "moura.yaml"), validManifest);
       const result = await validateProjectDirectory(directory);
-      assert.equal(
+      expect(
         result.errors.filter((item) => item.code === "unreadable-source")
           .length,
-        2,
-      );
+      ).toBe(2);
     } finally {
       await rm(directory, { recursive: true });
     }
@@ -344,12 +349,11 @@ requirements:
         const manifest = validManifest.replace("req.md", source);
         await writeFile(join(directory, "moura.yaml"), manifest);
         const result = await validateProjectDirectory(directory);
-        assert.equal(
+        expect(
           result.errors.filter((item) => item.code === "invalid-source-path")
             .length,
-          1,
           source,
-        );
+        ).toBe(1);
       }
     } finally {
       await rm(directory, { recursive: true });
@@ -366,9 +370,9 @@ requirements:
       await writeFile(join(parent, "outside.md"), validRequirement);
       await symlink(join(parent, "outside.md"), join(directory, "req.md"));
       const result = await validateProjectDirectory(directory);
-      assert.ok(
+      expect(
         result.errors.some((item) => item.code === "invalid-source-path"),
-      );
+      ).toBeTruthy();
     } finally {
       await rm(parent, { recursive: true });
     }
@@ -381,7 +385,7 @@ requirements:
       await writeFile(join(directory, "actual-req.md"), validRequirement);
       await symlink("actual-req.md", join(directory, "req.md"));
       await writeFile(join(directory, "spec.md"), validSpecification);
-      assert.deepEqual((await validateProjectDirectory(directory)).errors, []);
+      expect((await validateProjectDirectory(directory)).errors).toEqual([]);
     } finally {
       await rm(directory, { recursive: true });
     }
@@ -398,9 +402,9 @@ requirements:
         join(directory, "moura.yaml"),
       );
       const result = await validateProjectDirectory(directory);
-      assert.ok(
+      expect(
         result.errors.some((item) => item.code === "invalid-source-path"),
-      );
+      ).toBeTruthy();
     } finally {
       await rm(parent, { recursive: true });
     }
@@ -418,8 +422,7 @@ requirements:
       await writeFile(join(directory, "req.md"), validRequirement);
       await writeFile(join(directory, "spec.md"), validSpecification);
       await symlink(directory, linkedDirectory);
-      assert.deepEqual(
-        (await validateProjectDirectory(linkedDirectory)).errors,
+      expect((await validateProjectDirectory(linkedDirectory)).errors).toEqual(
         [],
       );
     } finally {
@@ -433,12 +436,14 @@ requirements:
       requirementSources: new Map([["other.md", validRequirement]]),
       specificationSources: new Map([["spec.md", validSpecification]]),
     });
-    assert.ok(result.errors.some((item) => item.code === "missing-source"));
-    assert.ok(
+    expect(
+      result.errors.some((item) => item.code === "missing-source"),
+    ).toBeTruthy();
+    expect(
       result.errors.some(
         (item) => item.code === "missing-requirement-markdown",
       ),
-    );
+    ).toBeTruthy();
   });
 
   it("rejects non-project-relative paths before source-map lookup", () => {
@@ -451,13 +456,13 @@ requirements:
         requirementSources: new Map([[source, validRequirement]]),
         specificationSources: new Map([["spec.md", validSpecification]]),
       });
-      assert.ok(
+      expect(
         result.errors.some(
           (item) =>
             item.code === "invalid-source-path" && item.source === source,
         ),
         `requirement source ${JSON.stringify(source)}`,
-      );
+      ).toBeTruthy();
     }
   });
 
@@ -471,7 +476,7 @@ requirements:
         requirementSources: new Map([[source, validRequirement]]),
         specificationSources: new Map([["spec.md", validSpecification]]),
       });
-      assert.deepEqual(result.errors, [], source);
+      expect(result.errors, source).toEqual([]);
     }
   });
 
@@ -487,14 +492,13 @@ requirements:
           validManifest.replace("req.md", JSON.stringify(source)),
         );
         const result = await validateProjectDirectory(directory);
-        assert.equal(
+        expect(
           result.errors.filter(
             (item) =>
               item.code === "invalid-source-path" && item.source === source,
           ).length,
-          1,
           source,
-        );
+        ).toBe(1);
       }
     } finally {
       await rm(directory, { recursive: true });
@@ -507,9 +511,9 @@ requirements:
         .replace("verify: [unit]", "verify: [other, other]")
         .replace("layers: [unit]", "layers: []"),
     );
-    assert.ok(found.length >= 3);
-    assert.ok(found.includes("duplicate-verify-layer"));
-    assert.ok(found.includes("unknown-verification-layer"));
+    expect(found.length >= 3).toBeTruthy();
+    expect(found.includes("duplicate-verify-layer")).toBeTruthy();
+    expect(found.includes("unknown-verification-layer")).toBeTruthy();
   });
 });
 
@@ -521,7 +525,7 @@ describe("Markdown hierarchy and canonical matching", () => {
       "spec.md",
       parsed,
     );
-    assert.deepEqual(result.value?.requirements[0]?.scenarios[0]?.cases, [
+    expect(result.value?.requirements[0]?.scenarios[0]?.cases).toEqual([
       "CASE-001",
     ]);
   });
@@ -539,8 +543,7 @@ describe("Markdown hierarchy and canonical matching", () => {
 #### CASE-998
 ~~~~
 `;
-    assert.deepEqual(
-      validate(validManifest, validRequirement, fenced).errors,
+    expect(validate(validManifest, validRequirement, fenced).errors).toEqual(
       [],
     );
   });
@@ -554,8 +557,7 @@ describe("Markdown hierarchy and canonical matching", () => {
 -->
 <!-- ## REQ-998 Disabled requirement -->
 `;
-    assert.deepEqual(
-      validate(validManifest, validRequirement, commented).errors,
+    expect(validate(validManifest, validRequirement, commented).errors).toEqual(
       [],
     );
   });
@@ -566,9 +568,9 @@ describe("Markdown hierarchy and canonical matching", () => {
       "> ## REQ-001 Retired requirement\n",
       validSpecification,
     ).errors;
-    assert.ok(
+    expect(
       errors.some((item) => item.code === "missing-requirement-markdown"),
-    );
+    ).toBeTruthy();
   });
 
   it("does not satisfy the specification with a quoted hierarchy", () => {
@@ -581,22 +583,21 @@ describe("Markdown hierarchy and canonical matching", () => {
       "",
     ].join("\n");
     const errors = validate(validManifest, validRequirement, quoted).errors;
-    assert.ok(
+    expect(
       errors.some((item) => item.code === "missing-specification-requirement"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       errors.some((item) => item.code === "missing-specification-scenario"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       errors.some((item) => item.code === "missing-specification-case"),
-    );
+    ).toBeTruthy();
   });
 
   it("recognizes a top-level Requirement, Scenario, and Case hierarchy", () => {
-    assert.deepEqual(
+    expect(
       validate(validManifest, validRequirement, validSpecification).errors,
-      [],
-    );
+    ).toEqual([]);
   });
 
   it("does not recognize a heading nested inside a list", () => {
@@ -605,40 +606,37 @@ describe("Markdown hierarchy and canonical matching", () => {
       "- ## REQ-001 Listed requirement\n",
       validSpecification,
     ).errors;
-    assert.ok(
+    expect(
       errors.some((item) => item.code === "missing-requirement-markdown"),
-    );
+    ).toBeTruthy();
   });
 
   it("recognizes ATX headings with up to three leading spaces", () => {
-    assert.deepEqual(
+    expect(
       validate(
         validManifest,
         " ## REQ-001 Requirement\n",
         " ## REQ-001 Requirement\n  ### SCN-001 Scenario\n   #### CASE-001 Case\n",
       ).errors,
-      [],
-    );
+    ).toEqual([]);
   });
 
   it("does not treat four-space-indented lines as ATX headings", () => {
     const specification = `${validSpecification}\n    ## REQ-999 Not a heading\n`;
-    assert.deepEqual(
+    expect(
       validate(validManifest, validRequirement, specification).errors,
-      [],
-    );
+    ).toEqual([]);
   });
 
   it("preserves # in the complete whitespace-delimited ID token", () => {
     const manifest = validManifest.replaceAll("REQ-001", "REQ-001#draft");
-    assert.deepEqual(
+    expect(
       validate(
         manifest,
         "## REQ-001#draft Requirement\n",
         validSpecification.replace("REQ-001", "REQ-001#draft"),
       ).errors,
-      [],
-    );
+    ).toEqual([]);
   });
 
   it("uses hierarchy to disambiguate local IDs shared by every node kind", () => {
@@ -651,62 +649,64 @@ describe("Markdown hierarchy and canonical matching", () => {
       "# Requirements\n## shared Requirement\n",
       "# Specification\n## shared Requirement\n### shared Scenario\n#### shared Case\n",
     );
-    assert.deepEqual(result.errors, []);
+    expect(result.errors).toEqual([]);
   });
 
   it("allows Requirement/Scenario and Scenario/Case ID sharing independently", () => {
     const requirementScenario = validManifest
       .replace("REQ-001", "same-parent")
       .replace("SCN-001", "same-parent");
-    assert.deepEqual(
+    expect(
       validate(
         requirementScenario,
         "## same-parent\n",
         "## same-parent\n### same-parent\n#### CASE-001\n",
       ).errors,
-      [],
-    );
+    ).toEqual([]);
 
     const scenarioCase = validManifest
       .replace("SCN-001", "same-child")
       .replace("CASE-001", "same-child");
-    assert.deepEqual(
+    expect(
       validate(
         scenarioCase,
         validRequirement,
         "## REQ-001\n### same-child\n#### same-child\n",
       ).errors,
-      [],
-    );
+    ).toEqual([]);
   });
 
   it("detects a Case under the wrong Scenario", () => {
     const wrong = "## REQ-001\n### SCN-OTHER\n#### CASE-001\n### SCN-001\n";
     const found = validate(validManifest, validRequirement, wrong).errors;
-    assert.ok(found.some((item) => item.code === "missing-specification-case"));
-    assert.ok(found.some((item) => item.code === "unmanaged-markdown-id"));
+    expect(
+      found.some((item) => item.code === "missing-specification-case"),
+    ).toBeTruthy();
+    expect(
+      found.some((item) => item.code === "unmanaged-markdown-id"),
+    ).toBeTruthy();
   });
 
   it("detects missing and unmanaged Markdown nodes", () => {
-    assert.ok(
+    expect(
       validate(validManifest, "# Requirements", validSpecification).errors.some(
         (item) => item.code === "missing-requirement-markdown",
       ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       validate(
         validManifest,
         `${validRequirement}\n## REQ-999 Extra`,
         validSpecification,
       ).errors.some((item) => item.code === "unmanaged-markdown-id"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       validate(
         validManifest,
         validRequirement,
         "## REQ-001\n### SCN-001",
       ).errors.some((item) => item.code === "missing-specification-case"),
-    );
+    ).toBeTruthy();
   });
 
   it("detects every reserved Moura ID prefix in requirement sources", () => {
@@ -716,13 +716,13 @@ describe("Markdown hierarchy and canonical matching", () => {
         `${validRequirement}\n## ${id} Undeclared`,
         validSpecification,
       ).errors;
-      assert.ok(
+      expect(
         errors.some(
           (item) =>
             item.code === "unmanaged-markdown-id" && item.message.includes(id),
         ),
         `expected ${id} to be reported as unmanaged`,
-      );
+      ).toBeTruthy();
     }
   });
 
@@ -730,10 +730,9 @@ describe("Markdown hierarchy and canonical matching", () => {
     const requirement = `${validRequirement}
 ## SCN-001 Scenario details belong elsewhere
 ## CASE-001 Case details belong elsewhere`;
-    assert.deepEqual(
+    expect(
       validate(validManifest, requirement, validSpecification).errors,
-      [],
-    );
+    ).toEqual([]);
   });
 
   it("does not use a reserved prefix as a manifest node kind", () => {
@@ -741,14 +740,13 @@ describe("Markdown hierarchy and canonical matching", () => {
       .replace("REQ-001", "SCN-requirement")
       .replace("SCN-001", "CASE-scenario")
       .replace("CASE-001", "REQ-case");
-    assert.deepEqual(
+    expect(
       validate(
         manifest,
         "## SCN-requirement Requirement\n",
         "## SCN-requirement\n### CASE-scenario\n#### REQ-case\n",
       ).errors,
-      [],
-    );
+    ).toEqual([]);
   });
 
   it("does not let child IDs in a requirement source satisfy specification hierarchy", () => {
@@ -760,24 +758,25 @@ describe("Markdown hierarchy and canonical matching", () => {
       requirement,
       "## REQ-001 Requirement only",
     ).errors;
-    assert.ok(
+    expect(
       errors.some((item) => item.code === "missing-specification-scenario"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       errors.some((item) => item.code === "missing-specification-case"),
-    );
-    assert.ok(!errors.some((item) => item.code === "unmanaged-markdown-id"));
+    ).toBeTruthy();
+    expect(
+      !errors.some((item) => item.code === "unmanaged-markdown-id"),
+    ).toBeTruthy();
   });
 
   it("ignores ordinary undeclared headings in requirement sources", () => {
-    assert.deepEqual(
+    expect(
       validate(
         validManifest,
         `${validRequirement}\n## Architecture Notes`,
         validSpecification,
       ).errors,
-      [],
-    );
+    ).toEqual([]);
   });
 
   it("reports invalid heading parentage", () => {
@@ -786,8 +785,8 @@ describe("Markdown hierarchy and canonical matching", () => {
       validRequirement,
       "## REQ-001\n## SCN-001\n### CASE-001",
     ).errors;
-    assert.ok(
+    expect(
       errors.some((item) => item.code === "invalid-markdown-hierarchy"),
-    );
+    ).toBeTruthy();
   });
 });
