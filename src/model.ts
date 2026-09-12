@@ -1,3 +1,5 @@
+import type { CanonicalId } from "./id.js";
+
 /** The stable domain roles in Moura's traceability hierarchy. */
 export type NodeKind = "requirement" | "scenario" | "case";
 
@@ -26,13 +28,13 @@ export interface RequirementNode extends TraceNode {
 
 /** The smallest unit for which verification coverage is evaluated. */
 export interface CoveragePoint {
-  readonly canonicalCaseId: string;
+  readonly canonicalCaseId: CanonicalId;
   readonly layer: VerificationLayer;
 }
 
 /** Adapter-neutral evidence. A single result may cover several cases. */
 export interface Evidence {
-  readonly covers: readonly string[];
+  readonly covers: readonly CanonicalId[];
   readonly layer: VerificationLayer;
   readonly status: "passed" | "failed" | "skipped";
   readonly source?: string;
