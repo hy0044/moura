@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import { checkVerification } from "./check.js";
 import { parseManifest, type MouraManifest } from "./manifest.js";
@@ -23,9 +22,9 @@ requirements:
           - id: case
             verify: [${verify.join(", ")}]
 `);
-  assert.deepEqual(parsed.errors, []);
-  assert.ok(parsed.value);
-  return parsed.value;
+  expect(parsed.errors).toEqual([]);
+  expect(parsed.value).toBeDefined();
+  return parsed.value!;
 }
 
 function evidence(
@@ -67,8 +66,8 @@ describe("REQ-002 verification check contract", () => {
   for (const testCase of aggregationCases) {
     it(`aggregates ${testCase.name} evidence as ${testCase.expected}`, () => {
       const result = checkVerification(manifest(), evidence(testCase.statuses));
-      assert.equal(result.entries[0]?.status, testCase.expected);
-      assert.equal(result.passed, testCase.expected === "PASS");
+      expect(result.entries[0]?.status).toBe(testCase.expected);
+      expect(result.passed).toBe(testCase.expected === "PASS");
     });
   }
 
@@ -80,7 +79,7 @@ describe("REQ-002 verification check contract", () => {
     ] as const) {
       const forward = checkVerification(manifest(), evidence([left, right]));
       const reverse = checkVerification(manifest(), evidence([right, left]));
-      assert.deepEqual(forward, reverse);
+      expect(forward).toEqual(reverse);
     }
   });
 
@@ -89,17 +88,17 @@ describe("REQ-002 verification check contract", () => {
       manifest(["unit", "integration"]),
       evidence(["passed"]),
     );
-    assert.deepEqual(missing.entries, [
+    expect(missing.entries).toEqual([
       { caseId, layer: "unit", status: "PASS" },
       { caseId, layer: "integration", status: "MISSING" },
     ]);
-    assert.equal(missing.passed, false);
+    expect(missing.passed).toBe(false);
 
     const failed = checkVerification(manifest(["unit", "integration"]), [
       ...evidence(["passed"]),
       ...evidence(["failed"], "integration"),
     ]);
-    assert.deepEqual(failed.entries, [
+    expect(failed.entries).toEqual([
       { caseId, layer: "unit", status: "PASS" },
       { caseId, layer: "integration", status: "FAIL" },
     ]);
@@ -123,19 +122,18 @@ requirements:
         cases:
           - { id: earlier, verify: [unit] }
 `);
-    assert.ok(parsed.value);
-    assert.deepEqual(
-      checkVerification(parsed.value, []).entries.map(({ caseId, layer }) => [
+    expect(parsed.value).toBeDefined();
+    expect(
+      checkVerification(parsed.value!, []).entries.map(({ caseId, layer }) => [
         caseId,
         layer,
       ]),
-      [
-        ["second/behavior/later", "unit"],
-        ["second/behavior/later", "integration"],
-        ["second/behavior/last", "integration"],
-        ["first/behavior/earlier", "unit"],
-      ],
-    );
+    ).toEqual([
+      ["second/behavior/later", "unit"],
+      ["second/behavior/later", "integration"],
+      ["second/behavior/last", "integration"],
+      ["first/behavior/earlier", "unit"],
+    ]);
   });
 
   it("reports unknown canonical IDs instead of silently ignoring them", () => {
@@ -143,8 +141,8 @@ requirements:
       manifest(),
       evidence(["passed"], "unit", ["unknown/scenario/case"]),
     );
-    assert.equal(result.evidenceIssues[0]?.code, "unknown-evidence-id");
-    assert.equal(result.passed, false);
+    expect(result.evidenceIssues[0]?.code).toBe("unknown-evidence-id");
+    expect(result.passed).toBe(false);
   });
 
   it("reports evidence for undeclared verification layers", () => {
@@ -152,8 +150,8 @@ requirements:
       manifest(),
       evidence(["passed"], "system"),
     );
-    assert.equal(result.evidenceIssues[0]?.code, "unknown-evidence-layer");
-    assert.equal(result.passed, false);
+    expect(result.evidenceIssues[0]?.code).toBe("unknown-evidence-layer");
+    expect(result.passed).toBe(false);
   });
 
   it("reports evidence for a layer that the covered Case does not require", () => {
@@ -161,8 +159,8 @@ requirements:
       manifest(["unit"]),
       evidence(["passed"], "integration"),
     );
-    assert.equal(result.evidenceIssues[0]?.code, "non-required-evidence-pair");
-    assert.equal(result.passed, false);
+    expect(result.evidenceIssues[0]?.code).toBe("non-required-evidence-pair");
+    expect(result.passed).toBe(false);
   });
 
   it("distinguishes Case × layer pairs containing delimiter characters", () => {
@@ -195,12 +193,12 @@ requirements:
       { covers: ["r/s/x\0y"], layer: "z", status: "passed" },
     ]);
 
-    assert.ok(
+    expect(
       result.evidenceIssues.some(
         (issue) => issue.code === "non-required-evidence-pair",
       ),
-    );
-    assert.equal(result.passed, false);
+    ).toBeTruthy();
+    expect(result.passed).toBe(false);
   });
 
   it("limits v0.1 evidence targets to canonical Case IDs", () => {
@@ -208,8 +206,8 @@ requirements:
       manifest(),
       evidence(["passed"], "unit", ["requirement/scenario"]),
     );
-    assert.equal(result.evidenceIssues[0]?.code, "non-case-evidence-target");
-    assert.equal(result.passed, false);
+    expect(result.evidenceIssues[0]?.code).toBe("non-case-evidence-target");
+    expect(result.passed).toBe(false);
   });
 
   it("reports evidence with no coverage targets", () => {
@@ -217,15 +215,14 @@ requirements:
       manifest(),
       evidence(["passed"], "unit", []),
     );
-    assert.equal(result.evidenceIssues[0]?.code, "empty-evidence-coverage");
-    assert.equal(result.passed, false);
+    expect(result.evidenceIssues[0]?.code).toBe("empty-evidence-coverage");
+    expect(result.passed).toBe(false);
   });
 
   it("reports evidence issues independently of evidence ordering", () => {
     const unknownId = evidence(["passed"], "unit", ["unknown"])[0]!;
     const unknownLayer = evidence(["passed"], "system")[0]!;
-    assert.deepEqual(
-      checkVerification(manifest(), [unknownId, unknownLayer]),
+    expect(checkVerification(manifest(), [unknownId, unknownLayer])).toEqual(
       checkVerification(manifest(), [unknownLayer, unknownId]),
     );
   });

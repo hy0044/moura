@@ -92,7 +92,7 @@ pnpm lint:fix
 pnpm format
 pnpm format:check
 pnpm typecheck
-pnpm test
+pnpm test # run the TypeScript test suite with Vitest
 ```
 
 The executable exposes `validate`, version, and help commands. Domain types and canonical-ID construction are also exported for integrations.

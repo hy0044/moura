@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import { canonicalId, InvalidLocalIdError, localId } from "./id.js";
 import type { TraceNode } from "./model.js";
@@ -10,21 +9,18 @@ const testCase: TraceNode = { kind: "case", localId: "CASE-001" };
 
 describe("canonicalId", () => {
   it("builds IDs from each valid hierarchy level", () => {
-    assert.equal(canonicalId([requirement]), "REQ-001");
-    assert.equal(canonicalId([requirement, scenario]), "REQ-001/SCN-001");
-    assert.equal(
-      canonicalId([requirement, scenario, testCase]),
+    expect(canonicalId([requirement])).toBe("REQ-001");
+    expect(canonicalId([requirement, scenario])).toBe("REQ-001/SCN-001");
+    expect(canonicalId([requirement, scenario, testCase])).toBe(
       "REQ-001/SCN-001/CASE-001",
     );
   });
 
   it("rejects a slash in any local ID", () => {
-    assert.throws(() => localId("SCN/001"), InvalidLocalIdError);
-    assert.throws(
-      () =>
-        canonicalId([requirement, { kind: "scenario", localId: "SCN/001" }]),
-      InvalidLocalIdError,
-    );
+    expect(() => localId("SCN/001")).toThrow(InvalidLocalIdError);
+    expect(() =>
+      canonicalId([requirement, { kind: "scenario", localId: "SCN/001" }]),
+    ).toThrow(InvalidLocalIdError);
   });
 
   it("rejects whitespace in any local ID", () => {
@@ -35,14 +31,12 @@ describe("canonicalId", () => {
       "CASE-\t001",
       "REQ-\u0085001",
     ]) {
-      assert.throws(() => localId(value), InvalidLocalIdError);
+      expect(() => localId(value)).toThrow(InvalidLocalIdError);
     }
 
-    assert.throws(
-      () =>
-        canonicalId([requirement, { kind: "scenario", localId: "SCN\t001" }]),
-      InvalidLocalIdError,
-    );
+    expect(() =>
+      canonicalId([requirement, { kind: "scenario", localId: "SCN\t001" }]),
+    ).toThrow(InvalidLocalIdError);
   });
 
   it("accepts IDs without whitespace or the reserved separator", () => {
@@ -54,11 +48,11 @@ describe("canonicalId", () => {
       "login_flow",
       "REQ-\uFEFF001",
     ]) {
-      assert.equal(localId(value), value);
+      expect(localId(value)).toBe(value);
     }
   });
 
   it("rejects an invalid hierarchy", () => {
-    assert.throws(() => canonicalId([scenario]), /Invalid node hierarchy/);
+    expect(() => canonicalId([scenario])).toThrow(/Invalid node hierarchy/);
   });
 });
