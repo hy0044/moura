@@ -2,7 +2,7 @@
 
 Moura is an open-source, Git-native CLI for checking traceability between requirements, specifications, and test evidence, and for reporting verification coverage. It does not own the requirements or specifications: it connects the documents already reviewed in Git with evidence produced by test tools.
 
-> **Status:** Moura is in early development. The data model and manifest described here establish the intended foundation; the full CLI workflow is not implemented yet.
+> **Status:** Moura is in early development. Static project validation is available; evidence checking and reporting are not implemented yet.
 
 ## Why Moura?
 
@@ -73,15 +73,13 @@ requirements:
 
 Canonical IDs are intentionally omitted and derived from the nesting. Layer names are strings rather than a closed enum, allowing domains to use values such as `contract`, `security`, `manual`, `sil`, or `vehicle`. The repository's own [`moura.yaml`](moura.yaml), [`req.md`](req.md), and [`spec.md`](spec.md) are the primary real-world example; see the [v0.1 contract](docs/config.md).
 
-## Planned CLI
+## CLI
 
 ```sh
-moura validate # validate documents, manifest structure, hierarchy, and IDs
-moura check    # compare required coverage points with available evidence
-moura report   # render coverage by Requirement, Scenario, Case, and layer
+moura validate [directory] # validate moura.yaml and its configured Markdown sources
 ```
 
-Allure Results (`allure-results/*.json`) is the first intended evidence adapter, but the adapter is not part of the core model. `validate`, `check`, `report`, and the Allure adapter remain future work.
+Run `moura validate` to validate the current working directory, or pass a relative or absolute project directory explicitly. Relative paths are resolved from the current working directory. Evidence ingestion, `check`, `report`, and an Allure adapter remain future work.
 
 ## Development
 
@@ -97,7 +95,7 @@ pnpm typecheck
 pnpm test
 ```
 
-The current executable only exposes a version and an early-development help message. Domain types and canonical-ID construction are exported for continued implementation.
+The executable exposes `validate`, version, and help commands. Domain types and canonical-ID construction are also exported for integrations.
 
 ## License
 

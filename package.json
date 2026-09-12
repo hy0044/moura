@@ -24,15 +24,21 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "pnpm build && node --test \"dist/*.test.js\"",
+    "test": "pnpm build && node --test dist/*.test.js",
     "prepack": "pnpm build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/mdast": "^4.0.4",
     "@types/node": "^24.0.0",
     "eslint": "^10.10.0",
     "prettier": "^3.9.6",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.69.0"
+  },
+  "dependencies": {
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "yaml": "^2.9.0"
   }
 }

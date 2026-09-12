@@ -30,6 +30,8 @@ requirements:
 
 The schema is closed for v0.1: implementations must reject unknown fields in the objects shown above rather than silently assigning future meaning to them. Lists required by the model must be present and non-empty.
 
+YAML anchors and aliases are not supported in v0.1. A manifest containing an anchor or alias is invalid. Support may be considered in a future manifest version.
+
 A local ID must be a non-empty string containing neither `/` nor whitespace.
 Whitespace includes spaces, tabs, and other whitespace characters. Prefixes and
 fixed digit counts are not enforced: `REQ-001`, `login-flow`, and `login_flow`
@@ -38,7 +40,7 @@ continue to join local IDs with `/`.
 
 ## Markdown source convention
 
-Sources are natural Markdown documents using ATX headings (`#` through `######`). An ID-bearing heading starts, after the heading marker and whitespace, with its local ID as the first whitespace-delimited token; the rest is an optional title.
+Sources are natural Markdown documents using document-level ATX headings (`#` through `######`). Headings nested inside block quotes, lists, or other containers are prose rather than Moura structure and are ignored. An ID-bearing heading starts, after the heading marker and whitespace, with its local ID as the first whitespace-delimited token; the rest is an optional title.
 
 ```markdown
 # Requirements
@@ -60,7 +62,7 @@ The manifest tells the parser which local IDs to match. In addition, first headi
 
 ## Structural validation contract
 
-The future `moura validate` command must return failure, without warnings, when it finds any of these conditions:
+The `moura validate` command must return failure, without warnings, when it finds any of these conditions:
 
 - missing or unsupported manifest version, malformed structure, an unknown field, or a required empty list;
 - a configured source that does not exist or cannot be read;
