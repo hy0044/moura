@@ -165,6 +165,44 @@ requirements:
     assert.equal(result.passed, false);
   });
 
+  it("distinguishes Case × layer pairs containing delimiter characters", () => {
+    const collisionManifest: MouraManifest = {
+      version: 1,
+      sources: {
+        requirements: ["req.md"],
+        specifications: ["spec.md"],
+      },
+      verificationLayers: ["y\0z", "z", "other"],
+      requirements: [
+        {
+          kind: "requirement",
+          localId: "r",
+          scenarios: [
+            {
+              kind: "scenario",
+              localId: "s",
+              cases: [
+                { kind: "case", localId: "x", verify: ["y\0z"] },
+                { kind: "case", localId: "x\0y", verify: ["other"] },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = checkVerification(collisionManifest, [
+      { covers: ["r/s/x\0y"], layer: "z", status: "passed" },
+    ]);
+
+    assert.ok(
+      result.evidenceIssues.some(
+        (issue) => issue.code === "non-required-evidence-pair",
+      ),
+    );
+    assert.equal(result.passed, false);
+  });
+
   it("limits v0.1 evidence targets to canonical Case IDs", () => {
     const result = checkVerification(
       manifest(),

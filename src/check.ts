@@ -61,9 +61,12 @@ export function checkVerification(
 
   const declaredLayers = new Set(manifest.verificationLayers);
   const issues: EvidenceIssue[] = [];
-  const requiredPairKeys = new Set(
-    requiredPairs.map(({ caseId, layer }) => `${caseId}\0${layer}`),
-  );
+  const requiredLayersByCase = new Map<CanonicalId, Set<VerificationLayer>>();
+  for (const { caseId, layer } of requiredPairs) {
+    const layers = requiredLayersByCase.get(caseId) ?? new Set();
+    layers.add(layer);
+    requiredLayersByCase.set(caseId, layers);
+  }
   for (const item of evidence) {
     if (!declaredLayers.has(item.layer)) {
       issues.push({
@@ -96,7 +99,7 @@ export function checkVerification(
         });
       } else if (
         declaredLayers.has(item.layer) &&
-        !requiredPairKeys.has(`${coveredId}\0${item.layer}`)
+        !requiredLayersByCase.get(coveredId)?.has(item.layer)
       ) {
         issues.push({
           code: "non-required-evidence-pair",
@@ -109,11 +112,14 @@ export function checkVerification(
   }
 
   issues.sort((left, right) => {
-    const leftKey = [left.code, left.canonicalId ?? "", left.layer].join("\0");
-    const rightKey = [right.code, right.canonicalId ?? "", right.layer].join(
-      "\0",
+    const codeOrder = compareStrings(left.code, right.code);
+    if (codeOrder !== 0) return codeOrder;
+    const canonicalIdOrder = compareStrings(
+      left.canonicalId ?? "",
+      right.canonicalId ?? "",
     );
-    return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+    if (canonicalIdOrder !== 0) return canonicalIdOrder;
+    return compareStrings(left.layer, right.layer);
   });
 
   const entries = requiredPairs.map(({ caseId, layer }) => {
@@ -134,4 +140,8 @@ export function checkVerification(
     entries,
     evidenceIssues: issues,
   };
+}
+
+function compareStrings(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
