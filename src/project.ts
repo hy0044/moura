@@ -27,6 +27,10 @@ export function validateProject(input: ProjectInput): ValidationResult {
   const requirements = new Map<string, readonly string[]>();
   const specifications = new Map();
   for (const source of parsed.value.sources.requirements) {
+    if (!isValidProjectRelativeSourcePath(source)) {
+      errors.push(invalidSourcePath(source, "requirement"));
+      continue;
+    }
     const text = input.requirementSources.get(source);
     if (text === undefined) {
       errors.push(missingSource(source, "requirement"));
@@ -37,6 +41,10 @@ export function validateProject(input: ProjectInput): ValidationResult {
     if (result.value) requirements.set(source, result.value);
   }
   for (const source of parsed.value.sources.specifications) {
+    if (!isValidProjectRelativeSourcePath(source)) {
+      errors.push(invalidSourcePath(source, "specification"));
+      continue;
+    }
     const text = input.specificationSources.get(source);
     if (text === undefined) {
       errors.push(missingSource(source, "specification"));
@@ -58,6 +66,41 @@ function missingSource(path: string, kind: string): ValidationError {
     `Configured ${kind} source ${path} was not provided`,
     { source: path },
   );
+}
+
+function invalidSourcePath(path: string, kind: string): ValidationError {
+  return error(
+    "invalid-source-path",
+    `Configured ${kind} source ${path} must be a project-relative file path`,
+    { source: path },
+  );
+}
+
+export function isValidProjectRelativeSourcePath(path: string): boolean {
+  if (
+    path.includes("\0") ||
+    isAbsolute(path) ||
+    win32.isAbsolute(path) ||
+    /^[a-z]:/iu.test(path)
+  )
+    return false;
+
+  const segments = path.split(/[\\/]/u);
+  const finalSegment = segments.at(-1);
+  if (finalSegment === "" || finalSegment === "." || finalSegment === "..")
+    return false;
+
+  let depth = 0;
+  for (const segment of segments) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      if (depth === 0) return false;
+      depth -= 1;
+    } else {
+      depth += 1;
+    }
+  }
+  return depth > 0;
 }
 
 /** Filesystem adapter used by the CLI; integrations can use validateProject directly. */
@@ -120,12 +163,12 @@ async function load(
 ): Promise<void> {
   const projectRoot = await realpath(resolve(directory));
   for (const path of paths) {
+    // Core validation owns the manifest diagnostic. The adapter only skips the
+    // unsafe read here so validateProject reports that contract error once.
+    if (!isValidProjectRelativeSourcePath(path)) continue;
+
     const targetPath = resolve(projectRoot, path);
-    if (
-      isAbsolute(path) ||
-      win32.isAbsolute(path) ||
-      !isWithin(projectRoot, targetPath)
-    ) {
+    if (!isWithin(projectRoot, targetPath)) {
       errors.push(
         error(
           "invalid-source-path",

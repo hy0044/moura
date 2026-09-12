@@ -6,7 +6,11 @@ import { describe, it } from "node:test";
 
 import { parseManifest } from "./manifest.js";
 import { parseSpecificationMarkdown } from "./markdown.js";
-import { validateProject, validateProjectDirectory } from "./project.js";
+import {
+  isValidProjectRelativeSourcePath,
+  validateProject,
+  validateProjectDirectory,
+} from "./project.js";
 
 const validManifest = `
 version: 1
@@ -26,6 +30,58 @@ requirements:
 const validRequirement = "# Requirements\n\n## REQ-001 A title\n";
 const validSpecification =
   "# Specification\n\n## REQ-001 A title\n### SCN-001 Behavior\n#### CASE-001 Example\n";
+
+const sourcePathCases = [
+  { category: "valid", path: "req.md", valid: true },
+  { category: "valid", path: "./req.md", valid: true },
+  { category: "valid", path: "docs/req.md", valid: true },
+  {
+    category: "valid",
+    path: "docs/specifications/spec.md",
+    valid: true,
+  },
+  { category: "valid", path: "docs/../req.md", valid: true },
+  { category: "valid", path: "docs/sub/../req.md", valid: true },
+  { category: "absolute", path: "/req.md", valid: false },
+  { category: "absolute", path: "/docs/req.md", valid: false },
+  { category: "absolute", path: "C:\\docs\\req.md", valid: false },
+  { category: "absolute", path: "C:/docs/req.md", valid: false },
+  { category: "drive-qualified", path: "C:req.md", valid: false },
+  { category: "drive-qualified", path: "C:docs/req.md", valid: false },
+  { category: "drive-qualified", path: "D:spec.md", valid: false },
+  { category: "project-root escape", path: "../req.md", valid: false },
+  { category: "project-root escape", path: "../../req.md", valid: false },
+  {
+    category: "project-root escape",
+    path: "../project/req.md",
+    valid: false,
+  },
+  {
+    category: "project-root escape",
+    path: "docs/../../req.md",
+    valid: false,
+  },
+  { category: "normalizes to root", path: "", valid: false },
+  { category: "normalizes to root", path: ".", valid: false },
+  { category: "normalizes to root", path: "./", valid: false },
+  { category: "normalizes to root", path: "docs/..", valid: false },
+  {
+    category: "normalizes to root",
+    path: "docs/sub/../..",
+    valid: false,
+  },
+  { category: "directory-denoting", path: "req.md/", valid: false },
+  { category: "directory-denoting", path: "docs/", valid: false },
+  { category: "directory-denoting", path: "docs/.", valid: false },
+  { category: "directory-denoting", path: "docs/sub/.", valid: false },
+  { category: "directory-denoting", path: "docs/../", valid: false },
+  { category: "filesystem-impossible", path: "req\0.md", valid: false },
+  {
+    category: "filesystem-impossible",
+    path: "docs/\0req.md",
+    valid: false,
+  },
+] as const;
 
 function validate(
   manifest = validManifest,
@@ -49,6 +105,16 @@ function codes(
 }
 
 describe("manifest parsing and validation", () => {
+  it("enforces the configured source path contract", () => {
+    for (const testCase of sourcePathCases) {
+      assert.equal(
+        isValidProjectRelativeSourcePath(testCase.path),
+        testCase.valid,
+        `${testCase.category}: ${JSON.stringify(testCase.path)}`,
+      );
+    }
+  });
+
   it("accepts a valid manifest", () => assert.deepEqual(validate().errors, []));
 
   it("rejects a missing or unsupported version", () => {
@@ -230,8 +296,10 @@ requirements:
         const manifest = validManifest.replace("req.md", source);
         await writeFile(join(directory, "moura.yaml"), manifest);
         const result = await validateProjectDirectory(directory);
-        assert.ok(
-          result.errors.some((item) => item.code === "invalid-source-path"),
+        assert.equal(
+          result.errors.filter((item) => item.code === "invalid-source-path")
+            .length,
+          1,
           source,
         );
       }
@@ -323,6 +391,66 @@ requirements:
         (item) => item.code === "missing-requirement-markdown",
       ),
     );
+  });
+
+  it("rejects non-project-relative paths before source-map lookup", () => {
+    for (const { path: source } of sourcePathCases.filter(
+      (testCase) => !testCase.valid,
+    )) {
+      const manifest = validManifest.replace("req.md", JSON.stringify(source));
+      const result = validateProject({
+        manifest,
+        requirementSources: new Map([[source, validRequirement]]),
+        specificationSources: new Map([["spec.md", validSpecification]]),
+      });
+      assert.ok(
+        result.errors.some(
+          (item) =>
+            item.code === "invalid-source-path" && item.source === source,
+        ),
+        `requirement source ${JSON.stringify(source)}`,
+      );
+    }
+  });
+
+  it("accepts normalized project-relative source paths", () => {
+    for (const { path: source } of sourcePathCases.filter(
+      (testCase) => testCase.valid,
+    )) {
+      const manifest = validManifest.replace("req.md", JSON.stringify(source));
+      const result = validateProject({
+        manifest,
+        requirementSources: new Map([[source, validRequirement]]),
+        specificationSources: new Map([["spec.md", validSpecification]]),
+      });
+      assert.deepEqual(result.errors, [], source);
+    }
+  });
+
+  it("reports one contract diagnostic per unsafe directory source", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
+    try {
+      await writeFile(join(directory, "spec.md"), validSpecification);
+      for (const { path: source } of sourcePathCases.filter(
+        (testCase) => !testCase.valid,
+      )) {
+        await writeFile(
+          join(directory, "moura.yaml"),
+          validManifest.replace("req.md", JSON.stringify(source)),
+        );
+        const result = await validateProjectDirectory(directory);
+        assert.equal(
+          result.errors.filter(
+            (item) =>
+              item.code === "invalid-source-path" && item.source === source,
+          ).length,
+          1,
+          source,
+        );
+      }
+    } finally {
+      await rm(directory, { recursive: true });
+    }
   });
 
   it("collects multiple independent errors", () => {
