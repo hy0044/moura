@@ -6,7 +6,11 @@ import { describe, it } from "node:test";
 
 import { parseManifest } from "./manifest.js";
 import { parseSpecificationMarkdown } from "./markdown.js";
-import { validateProject, validateProjectDirectory } from "./project.js";
+import {
+  isValidProjectRelativeSourcePath,
+  validateProject,
+  validateProjectDirectory,
+} from "./project.js";
 
 const validManifest = `
 version: 1
@@ -26,6 +30,58 @@ requirements:
 const validRequirement = "# Requirements\n\n## REQ-001 A title\n";
 const validSpecification =
   "# Specification\n\n## REQ-001 A title\n### SCN-001 Behavior\n#### CASE-001 Example\n";
+
+const sourcePathCases = [
+  { category: "valid", path: "req.md", valid: true },
+  { category: "valid", path: "./req.md", valid: true },
+  { category: "valid", path: "docs/req.md", valid: true },
+  {
+    category: "valid",
+    path: "docs/specifications/spec.md",
+    valid: true,
+  },
+  { category: "valid", path: "docs/../req.md", valid: true },
+  { category: "valid", path: "docs/sub/../req.md", valid: true },
+  { category: "absolute", path: "/req.md", valid: false },
+  { category: "absolute", path: "/docs/req.md", valid: false },
+  { category: "absolute", path: "C:\\docs\\req.md", valid: false },
+  { category: "absolute", path: "C:/docs/req.md", valid: false },
+  { category: "drive-qualified", path: "C:req.md", valid: false },
+  { category: "drive-qualified", path: "C:docs/req.md", valid: false },
+  { category: "drive-qualified", path: "D:spec.md", valid: false },
+  { category: "project-root escape", path: "../req.md", valid: false },
+  { category: "project-root escape", path: "../../req.md", valid: false },
+  {
+    category: "project-root escape",
+    path: "../project/req.md",
+    valid: false,
+  },
+  {
+    category: "project-root escape",
+    path: "docs/../../req.md",
+    valid: false,
+  },
+  { category: "normalizes to root", path: "", valid: false },
+  { category: "normalizes to root", path: ".", valid: false },
+  { category: "normalizes to root", path: "./", valid: false },
+  { category: "normalizes to root", path: "docs/..", valid: false },
+  {
+    category: "normalizes to root",
+    path: "docs/sub/../..",
+    valid: false,
+  },
+  { category: "directory-denoting", path: "req.md/", valid: false },
+  { category: "directory-denoting", path: "docs/", valid: false },
+  { category: "directory-denoting", path: "docs/.", valid: false },
+  { category: "directory-denoting", path: "docs/sub/.", valid: false },
+  { category: "directory-denoting", path: "docs/../", valid: false },
+  { category: "filesystem-impossible", path: "req\0.md", valid: false },
+  {
+    category: "filesystem-impossible",
+    path: "docs/\0req.md",
+    valid: false,
+  },
+] as const;
 
 function validate(
   manifest = validManifest,
@@ -49,6 +105,16 @@ function codes(
 }
 
 describe("manifest parsing and validation", () => {
+  it("enforces the configured source path contract", () => {
+    for (const testCase of sourcePathCases) {
+      assert.equal(
+        isValidProjectRelativeSourcePath(testCase.path),
+        testCase.valid,
+        `${testCase.category}: ${JSON.stringify(testCase.path)}`,
+      );
+    }
+  });
+
   it("accepts a valid manifest", () => assert.deepEqual(validate().errors, []));
 
   it("rejects a missing or unsupported version", () => {
@@ -328,62 +394,29 @@ requirements:
   });
 
   it("rejects non-project-relative paths before source-map lookup", () => {
-    const cases = [
-      ["requirement", "/absolute/req.md"],
-      ["specification", "/absolute/spec.md"],
-      ["requirement", "../req.md"],
-      ["requirement", "../../req.md"],
-      ["requirement", "../project/req.md"],
-      ["requirement", "docs/../../req.md"],
-      ["requirement", ""],
-      ["requirement", "."],
-      ["requirement", "./"],
-      ["requirement", "docs/.."],
-      ["requirement", "docs/sub/../.."],
-      ["requirement", "req.md/"],
-      ["requirement", "docs/"],
-      ["requirement", "docs/."],
-      ["requirement", "docs/sub/."],
-      ["requirement", "docs/../"],
-      ["requirement", "C:docs/req.md"],
-      ["requirement", "C:\\docs\\req.md"],
-      ["requirement", "C:/docs/req.md"],
-      ["specification", "D:spec.md"],
-    ] as const;
-
-    for (const [kind, source] of cases) {
-      const manifest = validManifest.replace(
-        kind === "requirement" ? "req.md" : "spec.md",
-        JSON.stringify(source),
-      );
+    for (const { path: source } of sourcePathCases.filter(
+      (testCase) => !testCase.valid,
+    )) {
+      const manifest = validManifest.replace("req.md", JSON.stringify(source));
       const result = validateProject({
         manifest,
-        requirementSources: new Map([
-          [kind === "requirement" ? source : "req.md", validRequirement],
-        ]),
-        specificationSources: new Map([
-          [kind === "specification" ? source : "spec.md", validSpecification],
-        ]),
+        requirementSources: new Map([[source, validRequirement]]),
+        specificationSources: new Map([["spec.md", validSpecification]]),
       });
       assert.ok(
         result.errors.some(
           (item) =>
             item.code === "invalid-source-path" && item.source === source,
         ),
-        `${kind} source ${source}`,
+        `requirement source ${JSON.stringify(source)}`,
       );
     }
   });
 
   it("accepts normalized project-relative source paths", () => {
-    for (const source of [
-      "req.md",
-      "./req.md",
-      "docs/req.md",
-      "docs/specifications/spec.md",
-      "docs/../req.md",
-      "docs/sub/../req.md",
-    ]) {
+    for (const { path: source } of sourcePathCases.filter(
+      (testCase) => testCase.valid,
+    )) {
       const manifest = validManifest.replace("req.md", JSON.stringify(source));
       const result = validateProject({
         manifest,
@@ -398,22 +431,9 @@ requirements:
     const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
     try {
       await writeFile(join(directory, "spec.md"), validSpecification);
-      for (const source of [
-        "../req.md",
-        "../project/req.md",
-        "docs/../../req.md",
-        "",
-        ".",
-        "./",
-        "docs/..",
-        "docs/sub/../..",
-        "req.md/",
-        "docs/",
-        "docs/.",
-        "docs/sub/.",
-        "docs/../",
-        "C:docs/req.md",
-      ]) {
+      for (const { path: source } of sourcePathCases.filter(
+        (testCase) => !testCase.valid,
+      )) {
         await writeFile(
           join(directory, "moura.yaml"),
           validManifest.replace("req.md", JSON.stringify(source)),

@@ -76,8 +76,13 @@ function invalidSourcePath(path: string, kind: string): ValidationError {
   );
 }
 
-function isValidProjectRelativeSourcePath(path: string): boolean {
-  if (isAbsolute(path) || win32.isAbsolute(path) || /^[a-z]:/iu.test(path))
+export function isValidProjectRelativeSourcePath(path: string): boolean {
+  if (
+    path.includes("\0") ||
+    isAbsolute(path) ||
+    win32.isAbsolute(path) ||
+    /^[a-z]:/iu.test(path)
+  )
     return false;
 
   const segments = path.split(/[\\/]/u);
