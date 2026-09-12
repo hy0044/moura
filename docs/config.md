@@ -76,4 +76,4 @@ The `moura validate` command must return failure, without warnings, when it find
 - a duplicate derived canonical ID; or
 - a reserved Moura-managed Markdown ID absent from the manifest.
 
-All errors are collected and reported in deterministic source order where possible, then manifest order. Any error makes validation fail. v0.1 defines no warnings. Evidence availability, result ingestion, and coverage status are not structural concerns and must not affect `validate`; they belong to future `moura check` behavior.
+All errors are collected and reported in deterministic source order where possible, then manifest order. Any error makes validation fail. v0.1 defines no warnings. Evidence availability, result ingestion, and coverage status are not structural concerns and must not affect `validate`; they belong to the separate [`moura check` contract](check.md).

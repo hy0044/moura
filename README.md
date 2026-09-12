@@ -2,7 +2,7 @@
 
 Moura is an open-source, Git-native CLI for checking traceability between requirements, specifications, and test evidence, and for reporting verification coverage. It does not own the requirements or specifications: it connects the documents already reviewed in Git with evidence produced by test tools.
 
-> **Status:** Moura is in early development. Static project validation is available; evidence checking and reporting are not implemented yet.
+> **Status:** Moura is in early development. Static project validation and the pure evidence-checking core are available; evidence adapters, the `check` CLI command, and reporting are not implemented yet.
 
 ## Why Moura?
 
@@ -40,7 +40,7 @@ Canonical IDs are identities, not paths or prescribed filenames. Reparenting a n
 
 The smallest coverage point is a canonical Case ID plus an open-ended verification-layer string, such as `REQ-001/SCN-001/CASE-001 + integration`. Tests and Cases have a many-to-many relationship; Moura does not require a proprietary test ID.
 
-See [Concepts](docs/concepts.md), the [v0.1 traceability specification](docs/config.md), and the [ID model](docs/id-model.md) for the authoritative details.
+See [Concepts](docs/concepts.md), the [v0.1 traceability specification](docs/config.md), the [initial evidence-checking contract](docs/check.md), and the [ID model](docs/id-model.md) for the authoritative details.
 
 ## Traceability manifest
 
@@ -79,7 +79,7 @@ Canonical IDs are intentionally omitted and derived from the nesting. Layer name
 moura validate [directory] # validate moura.yaml and its configured Markdown sources
 ```
 
-Run `moura validate` to validate the current working directory, or pass a relative or absolute project directory explicitly. Relative paths are resolved from the current working directory. Evidence ingestion, `check`, `report`, and an Allure adapter remain future work.
+Run `moura validate` to validate the current working directory, or pass a relative or absolute project directory explicitly. Relative paths are resolved from the current working directory. The pure evidence check is exported for integrations, while evidence ingestion, the `check` CLI command, `report`, and adapters remain future work.
 
 ## Development
 
