@@ -1,17 +1,31 @@
 import { readFileSync, readdirSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import console from "node:console";
+import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
 import process from "node:process";
 
 import { parse } from "yaml";
 
+import {
+  validateMouraEvidenceResults,
+  verifyRepresentativeResult,
+} from "./verify-allure-results.mjs";
+
 const resultsDirectory = "allure-results";
 rmSync(resultsDirectory, { recursive: true, force: true });
 
-const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const require = createRequire(import.meta.url);
+const vitestPackagePath = require.resolve("vitest/package.json");
+const vitestPackage = JSON.parse(readFileSync(vitestPackagePath, "utf8"));
+const vitestBin =
+  typeof vitestPackage.bin === "string"
+    ? vitestPackage.bin
+    : vitestPackage.bin.vitest;
+const vitestCliPath = resolve(dirname(vitestPackagePath), vitestBin);
 const run = spawnSync(
-  pnpm,
-  ["exec", "vitest", "run", "--config", "vitest.allure.config.ts"],
+  process.execPath,
+  [vitestCliPath, "run", "--config", "vitest.allure.config.ts"],
   { stdio: "inherit" },
 );
 if (run.error) throw run.error;
@@ -35,40 +49,18 @@ const results = readdirSync(resultsDirectory)
     JSON.parse(readFileSync(`${resultsDirectory}/${file}`, "utf8")),
   );
 
-verifyResult("aggregates an empty set of evidence as MISSING", [
-  "REQ-002/SCN-001/CASE-002",
-]);
-verifyResult("aggregates passed and skipped evidence as PASS", [
-  "REQ-002/SCN-001/CASE-001",
-  "REQ-002/SCN-001/CASE-005",
-]);
-
-function verifyResult(name, expectedCases) {
-  const matches = results.filter((result) => result.name === name);
-  if (matches.length !== 1)
-    throw new Error(
-      `Expected exactly one Allure result named ${JSON.stringify(name)}`,
-    );
-
-  const labels = matches[0].labels ?? [];
-  const actualCases = labels
-    .filter((label) => label.name === "moura_case")
-    .map((label) => label.value);
-  const actualLayers = labels
-    .filter((label) => label.name === "moura_layer")
-    .map((label) => label.value);
-
-  if (
-    actualCases.length !== expectedCases.length ||
-    !expectedCases.every((caseId) => actualCases.includes(caseId))
-  )
-    throw new Error(`${name} has unexpected moura_case labels`);
-  if (actualLayers.length !== 1 || actualLayers[0] !== "unit")
-    throw new Error(`${name} must have exactly one moura_layer label: unit`);
-  if (!actualCases.every((caseId) => canonicalCases.has(caseId)))
-    throw new Error(`${name} references a Case absent from moura.yaml`);
-  if (!layers.has(actualLayers[0]))
-    throw new Error(`${name} references a layer absent from moura.yaml`);
-}
+validateMouraEvidenceResults(results, canonicalCases, layers);
+verifyRepresentativeResult(
+  results,
+  "aggregates an empty set of evidence as MISSING",
+  ["REQ-002/SCN-001/CASE-002"],
+  "unit",
+);
+verifyRepresentativeResult(
+  results,
+  "aggregates passed and skipped evidence as PASS",
+  ["REQ-002/SCN-001/CASE-001", "REQ-002/SCN-001/CASE-005"],
+  "unit",
+);
 
 console.log("Verified Moura labels in generated Allure result JSON.");
