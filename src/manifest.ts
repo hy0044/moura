@@ -1,4 +1,4 @@
-import { parseDocument, YAMLMap, YAMLSeq, type Node } from "yaml";
+import { parseDocument, visit, YAMLMap, YAMLSeq, type Node } from "yaml";
 
 import type {
   CaseNode,
@@ -40,6 +40,28 @@ export function parseManifest(
       error("invalid-yaml", `${source}: ${problem.message}`, { source }),
     );
   }
+  visit(document, {
+    Alias(_key, node) {
+      errors.push(
+        error(
+          "unsupported-yaml-alias",
+          `${source} contains unsupported YAML alias *${node.source}`,
+          { source },
+        ),
+      );
+    },
+    Value(_key, node) {
+      if (node.anchor) {
+        errors.push(
+          error(
+            "unsupported-yaml-anchor",
+            `${source} contains unsupported YAML anchor &${node.anchor}`,
+            { source },
+          ),
+        );
+      }
+    },
+  });
   const root = document.contents;
   if (!(root instanceof YAMLMap)) {
     errors.push(

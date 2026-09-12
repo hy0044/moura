@@ -182,6 +182,54 @@ requirements:
     assert.ok(result.errors.every((item) => item.source === "moura.yaml"));
   });
 
+  describe("YAML features in the v0.1 manifest contract", () => {
+    const aliasManifests = [
+      {
+        name: "sequence alias",
+        manifest: validManifest
+          .replace("  layers: [unit]", "  layers: &layers [unit]")
+          .replace("            verify: [unit]", "            verify: *layers"),
+      },
+      {
+        name: "mapping alias used as a list item",
+        manifest: validManifest.replace(
+          "  - id: REQ-001",
+          "  - &requirement\n    id: REQ-001\n    scenarios: []\n  - *requirement",
+        ),
+      },
+      {
+        name: "scalar alias used as a list item",
+        manifest: validManifest
+          .replace("  layers: [unit]", "  layers: [&unit unit]")
+          .replace("            verify: [unit]", "            verify: [*unit]"),
+      },
+    ] as const;
+
+    for (const testCase of aliasManifests) {
+      it(`rejects a ${testCase.name} explicitly`, () => {
+        const result = parseManifest(testCase.manifest);
+        const aliasErrors = result.errors.filter(
+          (item) => item.code === "unsupported-yaml-alias",
+        );
+        assert.equal(aliasErrors.length, 1);
+        assert.match(aliasErrors[0]?.message ?? "", /unsupported YAML alias/u);
+      });
+    }
+
+    it("rejects an anchor even when it is not referenced", () => {
+      const result = parseManifest(
+        validManifest.replace("  layers: [unit]", "  layers: &layers [unit]"),
+      );
+      assert.ok(
+        result.errors.some((item) => item.code === "unsupported-yaml-anchor"),
+      );
+    });
+
+    it("continues to accept a normal manifest", () => {
+      assert.deepEqual(parseManifest(validManifest).errors, []);
+    });
+  });
+
   it("reports duplicate Requirements, Scenarios, and Cases", () => {
     const manifest = validManifest
       .replace(
