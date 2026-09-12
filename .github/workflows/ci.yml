@@ -41,6 +41,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Generate and verify Allure results
+        run: pnpm test:allure
+
       - name: Build
         run: pnpm build
 

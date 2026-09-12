@@ -93,7 +93,19 @@ pnpm format
 pnpm format:check
 pnpm typecheck
 pnpm test # run the TypeScript test suite with Vitest
+pnpm test:allure # run the same suite and verify generated Allure results
 ```
+
+`pnpm test` is the fast local test command and does not create persistent test
+results. `pnpm test:allure` writes `allure-results/` with the official Vitest
+integration, then checks the emitted Moura metadata. Moura targets Allure Report
+3+; report generation itself is intentionally not part of this command.
+
+Evidence-producing tests use the Moura-owned custom Allure labels
+`moura_case` and `moura_layer`. They are not built-in Allure identity or suite
+semantics: repeated `moura_case` labels will map to future
+`Evidence.covers[]`, while the exactly one `moura_layer` label will map to future
+`Evidence.layer`. Case IDs and layer values must come from `moura.yaml`.
 
 The executable exposes `validate`, version, and help commands. Domain types and canonical-ID construction are also exported for integrations.
 
