@@ -85,9 +85,11 @@ describe("REQ-002 verification check contract", () => {
     const cases =
       testCase.name === "an empty set of"
         ? ["REQ-002/SCN-001/CASE-002"]
-        : testCase.name === "passed and skipped"
-          ? ["REQ-002/SCN-001/CASE-001", "REQ-002/SCN-001/CASE-005"]
-          : [];
+        : testCase.name === "broken"
+          ? ["REQ-002/SCN-001/CASE-008"]
+          : testCase.name === "passed and skipped"
+            ? ["REQ-002/SCN-001/CASE-001", "REQ-002/SCN-001/CASE-005"]
+            : [];
 
     it(mouraEvidenceName(name, cases, "unit"), () => {
       const result = checkVerification(manifest(), evidence(testCase.statuses));

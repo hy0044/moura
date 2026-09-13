@@ -33,3 +33,4 @@ requirements:
           - { id: CASE-005, verify: [unit, integration] }
           - { id: CASE-006, verify: [unit] }
           - { id: CASE-007, verify: [unit] }
+          - { id: CASE-008, verify: [unit] }

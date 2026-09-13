@@ -63,7 +63,7 @@ Validation fails when a Moura-managed Requirement, Scenario, or Case ID is prese
 
 #### CASE-001 Pass when required evidence passes
 
-A required Case × layer pair is `PASS` when at least one matching record is passed and no matching record is failed.
+A required Case × layer pair is `PASS` when at least one matching record is passed and no matching record is failed or broken.
 
 #### CASE-002 Report missing evidence
 
@@ -71,7 +71,7 @@ A required Case × layer pair is `MISSING` when no evidence matches its canonica
 
 #### CASE-003 Fail when matching evidence fails
 
-A required Case × layer pair is `FAIL` when any matching record is failed. Failure dominates passed and skipped records.
+A required Case × layer pair is `FAIL` when any matching record is failed. Failure dominates broken, passed, and skipped records.
 
 #### CASE-004 Treat skipped-only evidence as skipped
 
@@ -79,7 +79,7 @@ A required Case × layer pair is `SKIPPED` when matching evidence exists but eve
 
 #### CASE-005 Aggregate multiple records and layers deterministically
 
-Multiple records are aggregated independently of input order. Passed plus skipped is `PASS`; any set containing failed is `FAIL`; and multiple passed records are `PASS`. Each required layer is evaluated independently, and results retain Requirement → Scenario → Case → verify-layer manifest order.
+Multiple records are aggregated independently of input order using the precedence `FAILED > BROKEN > PASSED > SKIPPED`. Passed plus skipped is `PASS`; broken plus passed or skipped is `BROKEN`; any set containing failed, including failed plus broken, is `FAIL`; and multiple passed records are `PASS`. Each required layer is evaluated independently, and results retain Requirement → Scenario → Case → verify-layer manifest order.
 
 #### CASE-006 Reject invalid canonical evidence targets
 
@@ -88,3 +88,7 @@ Evidence checking fails and reports evidence that has no target, refers to an un
 #### CASE-007 Reject invalid verification layers
 
 Evidence checking fails and reports evidence using a layer not declared by the project or not required by its covered Case.
+
+#### CASE-008 Treat broken evidence as broken
+
+A required Case × layer pair is `BROKEN` when at least one matching record is broken and no matching record is failed. Broken dominates passed and skipped records: broken alone, broken plus passed, and broken plus skipped are `BROKEN`, while failed plus broken is `FAIL`.
