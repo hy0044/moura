@@ -2,7 +2,8 @@ import { canonicalId, type CanonicalId } from "./id.js";
 import type { MouraManifest } from "./manifest.js";
 import type { Evidence, VerificationLayer } from "./model.js";
 
-export type VerificationCheckStatus = "PASS" | "FAIL" | "MISSING" | "SKIPPED";
+export type VerificationCheckStatus =
+  "PASS" | "FAIL" | "BROKEN" | "MISSING" | "SKIPPED";
 
 export interface VerificationCheckResult {
   readonly caseId: CanonicalId;
@@ -129,6 +130,8 @@ export function checkVerification(
     let status: VerificationCheckStatus;
     if (matching.length === 0) status = "MISSING";
     else if (matching.some((item) => item.status === "failed")) status = "FAIL";
+    else if (matching.some((item) => item.status === "broken"))
+      status = "BROKEN";
     else if (matching.some((item) => item.status === "passed")) status = "PASS";
     else status = "SKIPPED";
     return { caseId, layer, status };

@@ -2,7 +2,7 @@
 
 Moura is an open-source, Git-native CLI for checking traceability between requirements, specifications, and test evidence, and for reporting verification coverage. It does not own the requirements or specifications: it connects the documents already reviewed in Git with evidence produced by test tools.
 
-> **Status:** Moura is in early development. Static project validation and the pure evidence-checking core are available; evidence adapters, the `check` CLI command, and reporting are not implemented yet.
+> **Status:** Moura is in early development. Static project validation, the pure evidence-checking core, and an Allure evidence adapter are available; the `check` CLI command and reporting are not implemented yet.
 
 ## Why Moura?
 
@@ -79,7 +79,7 @@ Canonical IDs are intentionally omitted and derived from the nesting. Layer name
 moura validate [directory] # validate moura.yaml and its configured Markdown sources
 ```
 
-Run `moura validate` to validate the current working directory, or pass a relative or absolute project directory explicitly. Relative paths are resolved from the current working directory. The pure evidence check is exported for integrations, while evidence ingestion, the `check` CLI command, `report`, and adapters remain future work.
+Run `moura validate` to validate the current working directory, or pass a relative or absolute project directory explicitly. Relative paths are resolved from the current working directory. The pure evidence check and Allure adapter are exported for integrations, while CLI evidence ingestion, the `check` command, and `report` remain future work.
 
 ## Development
 

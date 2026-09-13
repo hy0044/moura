@@ -1,4 +1,5 @@
 export * from "./check.js";
+export * from "./adapters/allure.js";
 export * from "./id.js";
 export * from "./model.js";
 export * from "./manifest.js";

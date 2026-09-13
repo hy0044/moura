@@ -36,6 +36,6 @@ export interface CoveragePoint {
 export interface Evidence {
   readonly covers: readonly CanonicalId[];
   readonly layer: VerificationLayer;
-  readonly status: "passed" | "failed" | "skipped";
+  readonly status: "passed" | "failed" | "broken" | "skipped";
   readonly source?: string;
 }
