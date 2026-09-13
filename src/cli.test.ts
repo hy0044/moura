@@ -64,6 +64,25 @@ async function writeValidProject(directory: string): Promise<void> {
   ]);
 }
 
+async function writeEvidence(
+  directory: string,
+  status: "passed" | "failed" | "broken" | "skipped" = "passed",
+  caseId = "REQ-001/SCN-001/CASE-001",
+): Promise<void> {
+  const results = join(directory, "allure-results");
+  await mkdir(results);
+  await writeFile(
+    join(results, "test-result.json"),
+    JSON.stringify({
+      status,
+      labels: [
+        { name: "moura_case", value: caseId },
+        { name: "moura_layer", value: "unit" },
+      ],
+    }),
+  );
+}
+
 describe("CLI", () => {
   it("validates the current working directory when no directory is given", async () => {
     const directory = await mkdtemp(join(tmpdir(), "moura-cli-test-"));
@@ -105,10 +124,41 @@ describe("CLI", () => {
     for (const args of [[], ["--help"]]) {
       const help = await run(args, process.cwd());
       expect(help.status, help.stderr).toBe(0);
-      expect(help.stdout).toMatch(/^Available commands: validate\.$/mu);
-      expect(help.stdout).toMatch(/^Planned commands: check, report\.$/mu);
+      expect(help.stdout).toMatch(/^Available commands: validate, check\.$/mu);
+      expect(help.stdout).toMatch(/^Planned commands: report\.$/mu);
       expect(help.stdout).not.toMatch(/^Planned commands:.*validate/mu);
     }
+  });
+
+  it("checks the current working directory and passes complete evidence", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-cli-test-"));
+    try {
+      await writeValidProject(directory);
+      await writeEvidence(directory);
+      const result = await run(["check"], directory);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("PASS REQ-001/SCN-001/CASE-001 [unit]");
+    } finally {
+      await rm(directory, { recursive: true });
+    }
+  });
+
+  it("checks an explicitly supplied relative directory", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-cli-test-"));
+    try {
+      const project = join(directory, "project");
+      await writeValidProject(project);
+      await writeEvidence(project);
+      expect((await run(["check", "project"], directory)).status).toBe(0);
+    } finally {
+      await rm(directory, { recursive: true });
+    }
+  });
+
+  it("rejects extra check arguments", async () => {
+    const result = await run(["check", "a", "b"], process.cwd());
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Usage: moura check [directory]");
   });
 
   it("preserves version behavior", async () => {

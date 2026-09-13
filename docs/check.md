@@ -37,9 +37,9 @@ The check result contains one structured entry per required pair with its canoni
 
 The project passes only when every required pair is `PASS` and there are no evidence issues.
 
-## Eventual CLI flow
+## CLI flow
 
-The eventual `moura check` command will:
+`moura check [directory]`:
 
 1. structurally validate the project;
 2. load normalized evidence through a narrow adapter boundary;
@@ -47,7 +47,9 @@ The eventual `moura check` command will:
 4. render deterministic results; and
 5. exit `0` only when the project check passes.
 
-Any `FAIL`, `BROKEN`, `MISSING`, `SKIPPED`, invalid evidence, or structural validation error results in exit `1`. This phase does not wire evidence ingestion into the CLI.
+Any `FAIL`, `BROKEN`, `MISSING`, `SKIPPED`, invalid evidence, or structural validation error results in exit `1`. The directory defaults to the current working directory. Evidence is consumed from `<project>/allure-results/`; the command does not run tests or create evidence. A missing or unreadable results directory is an adapter input failure, while a readable directory with no matching evidence produces `MISSING` entries.
+
+Each required pair is printed as `<STATUS> <canonical Case ID> [<layer>]`. Adapter issues and semantic evidence issues are reported separately. The command succeeds only when every required verification point is `PASS` and neither kind of issue exists.
 
 ## Allure evidence adapter
 

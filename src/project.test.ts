@@ -7,6 +7,7 @@ import { parseManifest } from "./manifest.js";
 import { parseSpecificationMarkdown } from "./markdown.js";
 import {
   isValidProjectRelativeSourcePath,
+  loadProjectDirectory,
   validateProject,
   validateProjectDirectory,
 } from "./project.js";
@@ -333,6 +334,22 @@ requirements:
         result.errors.filter((item) => item.code === "unreadable-source")
           .length,
       ).toBe(2);
+    } finally {
+      await rm(directory, { recursive: true });
+    }
+  });
+
+  it("returns the validated manifest from the canonical filesystem boundary", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
+    try {
+      await Promise.all([
+        writeFile(join(directory, "moura.yaml"), validManifest),
+        writeFile(join(directory, "req.md"), validRequirement),
+        writeFile(join(directory, "spec.md"), validSpecification),
+      ]);
+      const loaded = await loadProjectDirectory(directory);
+      expect(loaded.errors).toEqual([]);
+      expect(loaded.manifest?.requirements[0]?.localId).toBe("REQ-001");
     } finally {
       await rm(directory, { recursive: true });
     }

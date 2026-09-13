@@ -1,7 +1,7 @@
 import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep, win32 } from "node:path";
 
-import { parseManifest } from "./manifest.js";
+import { parseManifest, type MouraManifest } from "./manifest.js";
 import {
   parseRequirementMarkdown,
   parseSpecificationMarkdown,
@@ -19,14 +19,28 @@ export interface ProjectInput {
   readonly specificationSources: ReadonlyMap<string, string>;
 }
 
+export interface LoadedProjectResult extends ValidationResult {
+  /** Present only when the complete project is structurally valid. */
+  readonly manifest?: MouraManifest;
+}
+
 /** Reusable, deterministic validation entry point for in-memory project files. */
 export function validateProject(input: ProjectInput): ValidationResult {
   const parsed = parseManifest(input.manifest);
   const errors: ValidationError[] = [...parsed.errors];
   if (!parsed.value) return { errors };
+  errors.push(...validateParsedProject(parsed.value, input));
+  return { errors };
+}
+
+function validateParsedProject(
+  manifest: MouraManifest,
+  input: Omit<ProjectInput, "manifest">,
+): readonly ValidationError[] {
+  const errors: ValidationError[] = [];
   const requirements = new Map<string, readonly string[]>();
   const specifications = new Map();
-  for (const source of parsed.value.sources.requirements) {
+  for (const source of manifest.sources.requirements) {
     if (!isValidProjectRelativeSourcePath(source)) {
       errors.push(invalidSourcePath(source, "requirement"));
       continue;
@@ -36,11 +50,11 @@ export function validateProject(input: ProjectInput): ValidationResult {
       errors.push(missingSource(source, "requirement"));
       continue;
     }
-    const result = parseRequirementMarkdown(text, source, parsed.value);
+    const result = parseRequirementMarkdown(text, source, manifest);
     errors.push(...result.errors);
     if (result.value) requirements.set(source, result.value);
   }
-  for (const source of parsed.value.sources.specifications) {
+  for (const source of manifest.sources.specifications) {
     if (!isValidProjectRelativeSourcePath(source)) {
       errors.push(invalidSourcePath(source, "specification"));
       continue;
@@ -50,14 +64,12 @@ export function validateProject(input: ProjectInput): ValidationResult {
       errors.push(missingSource(source, "specification"));
       continue;
     }
-    const result = parseSpecificationMarkdown(text, source, parsed.value);
+    const result = parseSpecificationMarkdown(text, source, manifest);
     errors.push(...result.errors);
     if (result.value) specifications.set(source, result.value);
   }
-  errors.push(
-    ...validateStructure(parsed.value, { requirements, specifications }),
-  );
-  return { errors };
+  errors.push(...validateStructure(manifest, { requirements, specifications }));
+  return errors;
 }
 
 function missingSource(path: string, kind: string): ValidationError {
@@ -107,6 +119,14 @@ export function isValidProjectRelativeSourcePath(path: string): boolean {
 export async function validateProjectDirectory(
   directory: string,
 ): Promise<ValidationResult> {
+  const loaded = await loadProjectDirectory(directory);
+  return { errors: loaded.errors };
+}
+
+/** Load project files once and expose the manifest only after full validation. */
+export async function loadProjectDirectory(
+  directory: string,
+): Promise<LoadedProjectResult> {
   const manifestPath = resolve(directory, "moura.yaml");
   let manifest: string;
   try {
@@ -146,12 +166,14 @@ export async function validateProjectDirectory(
     errors,
     "specification",
   );
-  const result = validateProject({
-    manifest,
-    requirementSources,
-    specificationSources,
-  });
-  return { errors: [...errors, ...result.errors] };
+  errors.push(...parsed.errors);
+  errors.push(
+    ...validateParsedProject(parsed.value, {
+      requirementSources,
+      specificationSources,
+    }),
+  );
+  return errors.length === 0 ? { manifest: parsed.value, errors } : { errors };
 }
 
 async function load(
