@@ -4,6 +4,36 @@ Moura is an open-source, Git-native CLI for checking traceability between requir
 
 > **Status:** Moura is in early development. Static project validation and Allure-backed evidence checking are available; reporting is not implemented yet.
 
+## First run
+
+A Moura project contains `moura.yaml` plus the requirement and specification
+Markdown files named by that manifest. Install the CLI from npm (or use
+`pnpm dlx moura` without a global install), then validate the project structure:
+
+```sh
+npm install --global moura
+cd my-project
+moura validate
+```
+
+Tests attach existing Allure evidence to a coverage point with a `moura_case`
+label containing the canonical Case ID and one `moura_layer` label:
+
+```ts
+await allure.label("moura_case", "REQ-001/SCN-001/CASE-001");
+await allure.label("moura_layer", "unit");
+```
+
+After the tests have written `allure-results/`, run `moura check`. Success means
+every required Case × layer pair is `PASS`, with no malformed or semantically
+invalid evidence. **`moura check` consumes existing evidence; it does not execute
+the user's tests.** See [the check contract](docs/check.md) for details.
+
+```sh
+your-test-command
+moura check
+```
+
 ## Why Moura?
 
 Teams often keep requirements, detailed behavior, and test results in separate formats. It can then be difficult to answer whether every specified case has evidence at every required verification layer. Moura aims to answer that question deterministically without introducing another system of record or requiring AI.
@@ -96,13 +126,16 @@ pnpm format
 pnpm format:check
 pnpm typecheck
 pnpm test # run the TypeScript test suite with Vitest
+pnpm test:coverage # run tests and create coverage HTML/JSON/LCOV
 pnpm test:allure # run the same suite and verify generated Allure results
+pnpm report:allure # create static Allure Report 3 HTML from allure-results
 ```
 
 `pnpm test` is the fast local test command and does not create persistent test
 results. `pnpm test:allure` writes `allure-results/` with the official Vitest
 integration, then checks the emitted Moura metadata. Moura targets Allure Report
-3+; report generation itself is intentionally not part of this command.
+3+. Report generation remains a separate command so existing result validation
+and static HTML generation have clear responsibilities.
 
 The repository currently annotates only the representative evidence-aggregation tests used to dogfood the Allure integration. Consequently, `node dist/cli.js check` intentionally reports `MISSING` for the remaining required points until those points have natural evidence-producing tests; Moura does not synthesize passing evidence.
 
@@ -113,6 +146,16 @@ semantics: repeated `moura_case` labels will map to future
 `Evidence.layer`. Case IDs and layer values must come from `moura.yaml`.
 
 The executable exposes `validate`, `check`, version, and help commands. Domain types and canonical-ID construction are also exported for integrations.
+
+## Quality reports
+
+Latest successful `main` branch reports:
+
+- [Test coverage](https://hy0044.github.io/moura/coverage/)
+- [Allure Report](https://hy0044.github.io/moura/allure/)
+
+These static reports are produced by CI; pull requests retain their reports as
+workflow artifacts without replacing the public site.
 
 ## License
 
