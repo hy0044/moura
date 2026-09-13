@@ -1,6 +1,8 @@
 import { appendFile, readFile } from "node:fs/promises";
 import process from "node:process";
 
+import { readAllureCounts } from "./ci-summary.mjs";
+
 const summaryPath = process.env.GITHUB_STEP_SUMMARY;
 if (!summaryPath) {
   throw new Error("GITHUB_STEP_SUMMARY is not set");
@@ -9,6 +11,7 @@ if (!summaryPath) {
 const coverage = JSON.parse(
   await readFile("coverage/coverage-summary.json", "utf8"),
 ).total;
+const allure = await readAllureCounts("allure-results");
 const metrics = [
   ["Statements", coverage.statements.pct],
   ["Branches", coverage.branches.pct],
@@ -23,6 +26,14 @@ const lines = [
   "### Coverage",
   "",
   ...metrics.map(([name, percentage]) => `- ${name}: ${percentage}%`),
+  "",
+  "### Allure",
+  "",
+  `- Tests: ${allure.tests}`,
+  `- Passed: ${allure.passed}`,
+  `- Failed: ${allure.failed}`,
+  `- Broken: ${allure.broken}`,
+  `- Skipped: ${allure.skipped}`,
   "",
   "### Reports",
   "",
