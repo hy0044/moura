@@ -96,7 +96,9 @@ jobs:
   deploy-pages:
     name: Deploy quality reports
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: quality
+    needs:
+      - quality
+      - windows-smoke
     runs-on: ubuntu-latest
     permissions:
       pages: write

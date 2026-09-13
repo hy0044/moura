@@ -24,16 +24,68 @@ describe("runCommand", () => {
     });
   });
 
-  it("uses the command shell once for Windows command shims", () => {
+  it("runs a native Windows executable directly without a shell", () => {
     const spawn = vi.fn(() => ({ status: 0, stdout: "", stderr: "" }));
 
-    runCommand("pnpm", ["pack"], { platform: "win32", spawn });
-
-    expect(spawn).toHaveBeenCalledWith("pnpm", ["pack"], {
-      cwd: undefined,
-      encoding: "utf8",
-      shell: true,
+    runCommand("C:\\Program Files\\nodejs\\node.exe", ["--version"], {
+      platform: "win32",
+      spawn,
     });
+
+    expect(spawn).toHaveBeenCalledWith(
+      "C:\\Program Files\\nodejs\\node.exe",
+      ["--version"],
+      {
+        cwd: undefined,
+        encoding: "utf8",
+        shell: false,
+      },
+    );
+  });
+
+  it.each([".cmd", ".bat"])(
+    "runs a Windows %s shim through cmd.exe",
+    (extension) => {
+      const spawn = vi.fn(() => ({ status: 0, stdout: "", stderr: "" }));
+      const shim = `C:\\tools\\pnpm${extension}`;
+
+      runCommand("pnpm", ["pack", "package path"], {
+        platform: "win32",
+        spawn,
+        environment: { ComSpec: "C:\\Windows\\System32\\cmd.exe" },
+        resolveCommand: () => shim,
+      });
+
+      expect(spawn).toHaveBeenCalledWith(
+        "C:\\Windows\\System32\\cmd.exe",
+        ["/d", "/s", "/c", `"${shim}" "pack" "package path"`],
+        {
+          cwd: undefined,
+          encoding: "utf8",
+          shell: false,
+        },
+      );
+    },
+  );
+
+  it("keeps a resolved Windows native executable shell-free", () => {
+    const spawn = vi.fn(() => ({ status: 0, stdout: "", stderr: "" }));
+
+    runCommand("node", ["--version"], {
+      platform: "win32",
+      spawn,
+      resolveCommand: () => "C:\\Program Files\\nodejs\\node.exe",
+    });
+
+    expect(spawn).toHaveBeenCalledWith(
+      "C:\\Program Files\\nodejs\\node.exe",
+      ["--version"],
+      {
+        cwd: undefined,
+        encoding: "utf8",
+        shell: false,
+      },
+    );
   });
 
   it("includes status, stdout, and stderr when a command fails", () => {
