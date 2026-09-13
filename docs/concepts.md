@@ -32,7 +32,7 @@ For example, a Case requiring unit and integration verification produces two ind
 
 Evidence is an adapter-neutral test result linked to one or more canonical Case IDs and one verification layer. This supports both directions of a many-to-many relationship: one result may cover multiple Cases, and multiple results may cover one Case.
 
-The initial pure check core aggregates evidence into `PASS`, `FAIL`, `MISSING`, and `SKIPPED`. Evidence adapters will map their native status and metadata into the core representation. Allure Results is one planned adapter, but Moura neither requires an Allure Report server nor exposes Allure-specific fields in its core types.
+The pure check core aggregates evidence into `PASS`, `FAIL`, `BROKEN`, `MISSING`, and `SKIPPED`. Evidence adapters map their native status and metadata into the core representation. Moura's Allure Results adapter requires neither an Allure Report server nor Allure runtime libraries, and the core types expose no Allure-specific fields.
 
 Structural validation does not read test results or decide whether evidence is
 available. That is the responsibility of the separate evidence-checking core and

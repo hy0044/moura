@@ -41,7 +41,23 @@ describe("REQ-002 verification check contract", () => {
     { name: "an empty set of", statuses: [], expected: "MISSING" },
     { name: "passed", statuses: ["passed"], expected: "PASS" },
     { name: "failed", statuses: ["failed"], expected: "FAIL" },
+    { name: "broken", statuses: ["broken"], expected: "BROKEN" },
     { name: "skipped", statuses: ["skipped"], expected: "SKIPPED" },
+    {
+      name: "broken and passed",
+      statuses: ["broken", "passed"],
+      expected: "BROKEN",
+    },
+    {
+      name: "broken and skipped",
+      statuses: ["broken", "skipped"],
+      expected: "BROKEN",
+    },
+    {
+      name: "failed and broken",
+      statuses: ["failed", "broken"],
+      expected: "FAIL",
+    },
     {
       name: "passed and skipped",
       statuses: ["passed", "skipped"],
@@ -69,9 +85,11 @@ describe("REQ-002 verification check contract", () => {
     const cases =
       testCase.name === "an empty set of"
         ? ["REQ-002/SCN-001/CASE-002"]
-        : testCase.name === "passed and skipped"
-          ? ["REQ-002/SCN-001/CASE-001", "REQ-002/SCN-001/CASE-005"]
-          : [];
+        : testCase.name === "broken"
+          ? ["REQ-002/SCN-001/CASE-008"]
+          : testCase.name === "passed and skipped"
+            ? ["REQ-002/SCN-001/CASE-001", "REQ-002/SCN-001/CASE-005"]
+            : [];
 
     it(mouraEvidenceName(name, cases, "unit"), () => {
       const result = checkVerification(manifest(), evidence(testCase.statuses));
@@ -85,6 +103,9 @@ describe("REQ-002 verification check contract", () => {
       ["passed", "failed"],
       ["passed", "skipped"],
       ["skipped", "failed"],
+      ["broken", "passed"],
+      ["broken", "skipped"],
+      ["failed", "broken"],
     ] as const) {
       const forward = checkVerification(manifest(), evidence([left, right]));
       const reverse = checkVerification(manifest(), evidence([right, left]));
