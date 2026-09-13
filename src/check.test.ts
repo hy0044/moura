@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { checkVerification } from "./check.js";
 import { parseManifest, type MouraManifest } from "./manifest.js";
 import type { Evidence } from "./model.js";
+import { mouraEvidenceName } from "./test-support/moura-evidence.js";
 
 const caseId = "requirement/scenario/case";
 
@@ -64,7 +65,15 @@ describe("REQ-002 verification check contract", () => {
   ] as const;
 
   for (const testCase of aggregationCases) {
-    it(`aggregates ${testCase.name} evidence as ${testCase.expected}`, () => {
+    const name = `aggregates ${testCase.name} evidence as ${testCase.expected}`;
+    const cases =
+      testCase.name === "an empty set of"
+        ? ["REQ-002/SCN-001/CASE-002"]
+        : testCase.name === "passed and skipped"
+          ? ["REQ-002/SCN-001/CASE-001", "REQ-002/SCN-001/CASE-005"]
+          : [];
+
+    it(mouraEvidenceName(name, cases, "unit"), () => {
       const result = checkVerification(manifest(), evidence(testCase.statuses));
       expect(result.entries[0]?.status).toBe(testCase.expected);
       expect(result.passed).toBe(testCase.expected === "PASS");

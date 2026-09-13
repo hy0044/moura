@@ -26,12 +26,14 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "test:allure": "node scripts/test-allure.mjs",
     "prepack": "pnpm build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/mdast": "^4.0.4",
     "@types/node": "^24.0.0",
+    "allure-vitest": "^3.12.1",
     "eslint": "^10.10.0",
     "prettier": "^3.9.6",
     "typescript": "^5.7.2",
