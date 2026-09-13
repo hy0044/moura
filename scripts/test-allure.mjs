@@ -32,15 +32,15 @@ if (run.error) throw run.error;
 if (run.status !== 0) process.exit(run.status ?? 1);
 
 const manifest = parse(readFileSync("moura.yaml", "utf8"));
-const canonicalCases = new Set(
-  manifest.requirements.flatMap((requirement) =>
-    requirement.scenarios.flatMap((scenario) =>
-      scenario.cases.map(
-        (testCase) => `${requirement.id}/${scenario.id}/${testCase.id}`,
-      ),
-    ),
-  ),
-);
+const verificationLayersByCase = new Map();
+for (const requirement of manifest.requirements) {
+  for (const scenario of requirement.scenarios) {
+    for (const testCase of scenario.cases) {
+      const caseId = `${requirement.id}/${scenario.id}/${testCase.id}`;
+      verificationLayersByCase.set(caseId, new Set(testCase.verify));
+    }
+  }
+}
 const layers = new Set(manifest.verification.layers);
 
 const results = readdirSync(resultsDirectory)
@@ -49,7 +49,7 @@ const results = readdirSync(resultsDirectory)
     JSON.parse(readFileSync(`${resultsDirectory}/${file}`, "utf8")),
   );
 
-validateMouraEvidenceResults(results, canonicalCases, layers);
+validateMouraEvidenceResults(results, verificationLayersByCase, layers);
 verifyRepresentativeResult(
   results,
   "aggregates an empty set of evidence as MISSING",

@@ -6,7 +6,7 @@ function labelValues(result, name) {
 
 export function validateMouraEvidenceResults(
   results,
-  canonicalCases,
+  verificationLayersByCase,
   verificationLayers,
 ) {
   for (const result of results) {
@@ -22,16 +22,25 @@ export function validateMouraEvidenceResults(
     if (layers.length !== 1)
       throw new Error(`${resultName} must have exactly one moura_layer label`);
 
+    const layer = layers[0];
     for (const caseId of cases) {
-      if (!canonicalCases.has(caseId))
+      const requiredLayers = verificationLayersByCase.get(caseId);
+      if (!requiredLayers)
         throw new Error(
           `${resultName} references unknown Moura Case ${caseId}`,
         );
     }
-    if (!verificationLayers.has(layers[0]))
+    if (!verificationLayers.has(layer))
       throw new Error(
-        `${resultName} references unknown Moura verification layer ${layers[0]}`,
+        `${resultName} references unknown Moura verification layer ${layer}`,
       );
+
+    for (const caseId of cases) {
+      if (!verificationLayersByCase.get(caseId).has(layer))
+        throw new Error(
+          `${resultName} references non-required Moura verification pair ${caseId} × ${layer}`,
+        );
+    }
   }
 }
 
