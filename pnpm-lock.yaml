@@ -35,6 +35,9 @@ importers:
       allure-vitest:
         specifier: ^3.12.1
         version: 3.12.1(@vitest/runner@4.1.11)(vitest@5.0.0)
+      cross-spawn:
+        specifier: ^7.0.6
+        version: 7.0.6
       eslint:
         specifier: ^10.10.0
         version: 10.10.0(jiti@2.7.0)

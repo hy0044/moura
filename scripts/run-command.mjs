@@ -1,15 +1,13 @@
-import { spawnSync } from "node:child_process";
-import process from "node:process";
+import crossSpawn from "cross-spawn";
 
 export function runCommand(
   command,
   args,
-  { cwd, platform = process.platform, spawn = spawnSync } = {},
+  { cwd, spawn = crossSpawn.sync } = {},
 ) {
   const result = spawn(command, args, {
     cwd,
     encoding: "utf8",
-    shell: platform === "win32",
   });
   const stdout = result.stdout ?? "";
   const stderr = result.stderr ?? "";

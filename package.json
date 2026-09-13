@@ -57,6 +57,7 @@
     "@vitest/coverage-v8": "^5.0.0",
     "allure": "^3.17.0",
     "allure-vitest": "^3.12.1",
+    "cross-spawn": "^7.0.6",
     "eslint": "^10.10.0",
     "prettier": "^3.9.6",
     "typescript": "^5.7.2",

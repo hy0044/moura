@@ -1,8 +1,7 @@
-import { access, cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import console from "node:console";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import process from "node:process";
 
 import { runCommand } from "./run-command.mjs";
 
@@ -26,11 +25,7 @@ try {
   const tarball = join(temporary, basename(tarballName));
   await access(tarball);
   await rm(packageDirectory, { recursive: true, force: true });
-  run(process.execPath, [
-    "-e",
-    "require('fs').mkdirSync(process.argv[1], {recursive:true})",
-    packageDirectory,
-  ]);
+  await mkdir(packageDirectory, { recursive: true });
   run("npm", ["init", "-y"], packageDirectory);
   run("npm", ["install", tarball], packageDirectory);
   const binary = join(packageDirectory, "node_modules", ".bin", "moura");

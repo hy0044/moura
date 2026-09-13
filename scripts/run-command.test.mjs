@@ -1,9 +1,11 @@
+import process from "node:process";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { runCommand } from "./run-command.mjs";
 
 describe("runCommand", () => {
-  it("runs a normal executable without a shell and returns its output", () => {
+  it("returns captured stdout and stderr on success", () => {
     const spawn = vi.fn(() => ({
       status: 0,
       stdout: "standard output",
@@ -13,26 +15,25 @@ describe("runCommand", () => {
     expect(
       runCommand("tool", ["argument"], {
         cwd: "/project",
-        platform: "linux",
         spawn,
       }),
     ).toEqual({ stdout: "standard output", stderr: "standard error" });
     expect(spawn).toHaveBeenCalledWith("tool", ["argument"], {
       cwd: "/project",
       encoding: "utf8",
-      shell: false,
     });
   });
 
-  it("uses the command shell once for Windows command shims", () => {
-    const spawn = vi.fn(() => ({ status: 0, stdout: "", stderr: "" }));
+  it("preserves arguments containing spaces", () => {
+    const result = runCommand(process.execPath, [
+      "-e",
+      "process.stdout.write(process.argv[1])",
+      "argument containing spaces",
+    ]);
 
-    runCommand("pnpm", ["pack"], { platform: "win32", spawn });
-
-    expect(spawn).toHaveBeenCalledWith("pnpm", ["pack"], {
-      cwd: undefined,
-      encoding: "utf8",
-      shell: true,
+    expect(result).toEqual({
+      stdout: "argument containing spaces",
+      stderr: "",
     });
   });
 
