@@ -62,6 +62,9 @@ jobs:
           path: allure-report/
           retention-days: 14
 
+      - name: Write quality job summary
+        run: pnpm quality:summary
+
       - name: Build
         run: pnpm build
 

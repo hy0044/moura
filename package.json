@@ -46,6 +46,7 @@
     "test:allure": "node scripts/test-allure.mjs",
     "report:allure": "node scripts/report-allure.mjs",
     "quality:site": "node scripts/build-quality-site.mjs",
+    "quality:summary": "node scripts/write-ci-summary.mjs",
     "test:package": "node scripts/package-smoke.mjs",
     "prepack": "pnpm build"
   },
