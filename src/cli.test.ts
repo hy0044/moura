@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -163,7 +163,8 @@ describe("CLI", () => {
 
   it("preserves version behavior", async () => {
     const version = await run(["--version"], process.cwd());
+    const packageJson = JSON.parse(await readFile("package.json", "utf8"));
     expect(version.status, version.stderr).toBe(0);
-    expect(version.stdout).toMatch(/moura 0\.1\.0/u);
+    expect(version.stdout.trim()).toBe(`moura ${packageJson.version}`);
   });
 });

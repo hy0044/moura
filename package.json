@@ -2,6 +2,22 @@
   "name": "moura",
   "version": "0.1.0",
   "description": "Git-native traceability and verification coverage CLI",
+  "keywords": [
+    "traceability",
+    "requirements",
+    "verification",
+    "testing",
+    "allure",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hy0044/moura.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hy0044/moura/issues"
+  },
+  "homepage": "https://github.com/hy0044/moura#readme",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.28.1",
   "type": "module",
@@ -26,14 +42,22 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:allure": "node scripts/test-allure.mjs",
+    "report:allure": "node scripts/report-allure.mjs && allure generate --output allure-report",
+    "quality:site": "node scripts/build-quality-site.mjs",
+    "quality:summary": "node scripts/write-ci-summary.mjs",
+    "test:package": "node scripts/package-smoke.mjs",
     "prepack": "pnpm build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/mdast": "^4.0.4",
     "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "^5.0.0",
+    "allure": "^3.17.0",
     "allure-vitest": "^3.12.1",
+    "cross-spawn": "^7.0.6",
     "eslint": "^10.10.0",
     "prettier": "^3.9.6",
     "typescript": "^5.7.2",
