@@ -1,8 +1,7 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [main]
+  pull_request: {}
   push:
     branches: [main]
 
@@ -133,10 +132,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Allure results and report
-        run: |
-          pnpm test:allure
-          pnpm report:allure
+      - name: Generate Allure results
+        run: pnpm test:allure
+
+      - name: Generate Allure HTML report
+        run: pnpm report:allure
 
       - name: Test installed package
         run: pnpm test:package
