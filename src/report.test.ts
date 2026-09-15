@@ -118,6 +118,37 @@ requirements:
     );
   });
 
+  it("identifies adapter issue sources in command and escaped HTML diagnostics", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-report-test-"));
+    directories.push(directory);
+    await writeProject(directory);
+    const result = await reportProjectDirectory(directory, {
+      loadEvidence: async () => ({
+        evidence: [],
+        issues: [
+          {
+            code: "malformed-json",
+            message: "Invalid <JSON>",
+            source: "broken-result.json",
+          },
+          { code: "unreadable-results-directory", message: "Cannot read" },
+        ],
+      }),
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toEqual([
+      "malformed-json: broken-result.json: Invalid <JSON>",
+      "unreadable-results-directory: Cannot read",
+    ]);
+    const html = await readFile(result.outputPath!, "utf8");
+    expect(html).toContain(
+      "malformed-json: broken-result.json: Invalid &lt;JSON&gt;",
+    );
+    expect(html).toContain("unreadable-results-directory: Cannot read");
+    expect(html).not.toContain("undefined");
+  });
+
   it("rejects a symlinked report directory without writing outside the project", async () => {
     const parent = await mkdtemp(join(tmpdir(), "moura-report-test-"));
     directories.push(parent);

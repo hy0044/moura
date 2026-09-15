@@ -19,6 +19,13 @@ export interface CheckCommandDependencies {
   readonly loadEvidence?: (directory: string) => Promise<EvidenceAdapterResult>;
 }
 
+export function formatEvidenceAdapterIssue(
+  issue: EvidenceAdapterResult["issues"][number],
+): string {
+  const source = issue.source === undefined ? "" : `${issue.source}: `;
+  return `${issue.code}: ${source}${issue.message}`;
+}
+
 export function formatEvidenceIssue(issue: EvidenceIssue): string {
   const target = issue.canonicalId ?? "(no Case ID)";
   return `${issue.code}: ${target} [${issue.layer}]: ${issue.message}`;
@@ -84,8 +91,7 @@ export async function checkProjectDirectory(
   if (adapted.issues.length > 0) {
     stderr.push("✗ Evidence adapter issues");
     for (const issue of adapted.issues) {
-      const source = issue.source === undefined ? "" : `${issue.source}: `;
-      stderr.push(`- ${issue.code}: ${source}${issue.message}`);
+      stderr.push(`- ${formatEvidenceAdapterIssue(issue)}`);
     }
   }
   if (checked.evidenceIssues.length > 0) {
