@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseManifest } from "./manifest.js";
 import { parseSpecificationMarkdown } from "./markdown.js";
+import { mouraEvidenceName } from "./test-support/moura-evidence.js";
 import {
   isValidProjectRelativeSourcePath,
   loadProjectDirectory,
@@ -114,20 +115,34 @@ describe("manifest parsing and validation", () => {
     }
   });
 
-  it("accepts a valid manifest", () => expect(validate().errors).toEqual([]));
+  it(
+    mouraEvidenceName(
+      "accepts a valid manifest",
+      ["REQ-001/SCN-001/CASE-001"],
+      "unit",
+    ),
+    () => expect(validate().errors).toEqual([]),
+  );
 
-  it("rejects a missing or unsupported version", () => {
-    expect(
-      codes(validManifest.replace("version: 1", "version: 2")).includes(
-        "unsupported-version",
-      ),
-    ).toBeTruthy();
-    expect(
-      codes(validManifest.replace("version: 1\n", "")).includes(
-        "unsupported-version",
-      ),
-    ).toBeTruthy();
-  });
+  it(
+    mouraEvidenceName(
+      "rejects a missing or unsupported version",
+      ["REQ-001/SCN-001/CASE-002"],
+      "unit",
+    ),
+    () => {
+      expect(
+        codes(validManifest.replace("version: 1", "version: 2")).includes(
+          "unsupported-version",
+        ),
+      ).toBeTruthy();
+      expect(
+        codes(validManifest.replace("version: 1\n", "")).includes(
+          "unsupported-version",
+        ),
+      ).toBeTruthy();
+    },
+  );
 
   it("rejects duplicate YAML mapping keys", () => {
     const result = parseManifest(`version: 1\nversion: 1\n`);
@@ -237,77 +252,114 @@ requirements:
     });
   });
 
-  it("reports duplicate Requirements, Scenarios, and Cases", () => {
-    const manifest = validManifest
-      .replace(
-        "  - id: REQ-001",
-        "  - id: REQ-001\n    scenarios: []\n  - id: REQ-001",
-      )
-      .replace(
-        "      - id: SCN-001",
-        "      - id: SCN-001\n        cases: []\n      - id: SCN-001",
-      )
-      .replace(
-        "          - id: CASE-001",
-        "          - id: CASE-001\n            verify: [unit]\n          - id: CASE-001",
-      );
-    const found = codes(manifest);
-    expect(found.includes("duplicate-requirement")).toBeTruthy();
-    expect(found.includes("duplicate-scenario")).toBeTruthy();
-    expect(found.includes("duplicate-case")).toBeTruthy();
-  });
+  it(
+    mouraEvidenceName(
+      "reports duplicate Requirements, Scenarios, and Cases",
+      [
+        "REQ-001/SCN-001/CASE-005",
+        "REQ-001/SCN-001/CASE-006",
+        "REQ-001/SCN-001/CASE-007",
+        "REQ-001/SCN-001/CASE-012",
+      ],
+      "unit",
+    ),
+    () => {
+      const manifest = validManifest
+        .replace(
+          "  - id: REQ-001",
+          "  - id: REQ-001\n    scenarios: []\n  - id: REQ-001",
+        )
+        .replace(
+          "      - id: SCN-001",
+          "      - id: SCN-001\n        cases: []\n      - id: SCN-001",
+        )
+        .replace(
+          "          - id: CASE-001",
+          "          - id: CASE-001\n            verify: [unit]\n          - id: CASE-001",
+        );
+      const found = codes(manifest);
+      expect(found.includes("duplicate-requirement")).toBeTruthy();
+      expect(found.includes("duplicate-scenario")).toBeTruthy();
+      expect(found.includes("duplicate-case")).toBeTruthy();
+      expect(found.includes("duplicate-canonical-id")).toBeTruthy();
+    },
+  );
 
-  it("reports missing Scenario, Case, and verify lists", () => {
-    expect(
-      codes(
-        validManifest.replace(/ {4}scenarios:[\s\S]*$/u, "    scenarios: []\n"),
-      ).includes("missing-scenario"),
-    ).toBeTruthy();
-    expect(
-      codes(
-        validManifest.replace(/ {8}cases:[\s\S]*$/u, "        cases: []\n"),
-      ).includes("missing-case"),
-    ).toBeTruthy();
-    expect(
-      codes(
-        validManifest.replace(
-          "            verify: [unit]",
-          "            verify: []",
+  it(
+    mouraEvidenceName(
+      "reports missing Scenario, Case, and verify lists",
+      ["REQ-001/SCN-001/CASE-009", "REQ-001/SCN-001/CASE-010"],
+      "unit",
+    ),
+    () => {
+      expect(
+        codes(
+          validManifest.replace(
+            / {4}scenarios:[\s\S]*$/u,
+            "    scenarios: []\n",
+          ),
+        ).includes("missing-scenario"),
+      ).toBeTruthy();
+      expect(
+        codes(
+          validManifest.replace(/ {8}cases:[\s\S]*$/u, "        cases: []\n"),
+        ).includes("missing-case"),
+      ).toBeTruthy();
+      expect(
+        codes(
+          validManifest.replace(
+            "            verify: [unit]",
+            "            verify: []",
+          ),
+        ).includes("missing-verify"),
+      ).toBeTruthy();
+    },
+  );
+
+  it(
+    mouraEvidenceName(
+      "reports unknown and duplicate verification layers",
+      ["REQ-001/SCN-001/CASE-011"],
+      "unit",
+    ),
+    () => {
+      expect(
+        codes(
+          validManifest.replace("verify: [unit]", "verify: [other]"),
+        ).includes("unknown-verification-layer"),
+      ).toBeTruthy();
+      expect(
+        codes(
+          validManifest.replace("layers: [unit]", "layers: [unit, unit]"),
+        ).includes("duplicate-verification-layer"),
+      ).toBeTruthy();
+      expect(
+        codes(
+          validManifest.replace("verify: [unit]", "verify: [unit, unit]"),
+        ).includes("duplicate-verify-layer"),
+      ).toBeTruthy();
+    },
+  );
+
+  it(
+    mouraEvidenceName(
+      "uses localId validation including Unicode White_Space",
+      ["REQ-001/SCN-001/CASE-008"],
+      "unit",
+    ),
+    () => {
+      expect(
+        codes(validManifest.replace("REQ-001", "BAD/ID")).includes(
+          "invalid-local-id",
         ),
-      ).includes("missing-verify"),
-    ).toBeTruthy();
-  });
-
-  it("reports unknown and duplicate verification layers", () => {
-    expect(
-      codes(
-        validManifest.replace("verify: [unit]", "verify: [other]"),
-      ).includes("unknown-verification-layer"),
-    ).toBeTruthy();
-    expect(
-      codes(
-        validManifest.replace("layers: [unit]", "layers: [unit, unit]"),
-      ).includes("duplicate-verification-layer"),
-    ).toBeTruthy();
-    expect(
-      codes(
-        validManifest.replace("verify: [unit]", "verify: [unit, unit]"),
-      ).includes("duplicate-verify-layer"),
-    ).toBeTruthy();
-  });
-
-  it("uses localId validation including Unicode White_Space", () => {
-    expect(
-      codes(validManifest.replace("REQ-001", "BAD/ID")).includes(
-        "invalid-local-id",
-      ),
-    ).toBeTruthy();
-    expect(
-      codes(validManifest.replace("SCN-001", "SCN-\u0085001")).includes(
-        "invalid-local-id",
-      ),
-    ).toBeTruthy();
-  });
+      ).toBeTruthy();
+      expect(
+        codes(validManifest.replace("SCN-001", "SCN-\u0085001")).includes(
+          "invalid-local-id",
+        ),
+      ).toBeTruthy();
+    },
+  );
 
   it("requires requirement and specification source entries", () => {
     expect(
@@ -325,35 +377,49 @@ requirements:
     ).toBeTruthy();
   });
 
-  it("reports configured source files that cannot be read", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
-    try {
-      await writeFile(join(directory, "moura.yaml"), validManifest);
-      const result = await validateProjectDirectory(directory);
-      expect(
-        result.errors.filter((item) => item.code === "unreadable-source")
-          .length,
-      ).toBe(2);
-    } finally {
-      await rm(directory, { recursive: true });
-    }
-  });
+  it(
+    mouraEvidenceName(
+      "reports configured source files that cannot be read",
+      ["REQ-001/SCN-001/CASE-003"],
+      "integration",
+    ),
+    async () => {
+      const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
+      try {
+        await writeFile(join(directory, "moura.yaml"), validManifest);
+        const result = await validateProjectDirectory(directory);
+        expect(
+          result.errors.filter((item) => item.code === "unreadable-source")
+            .length,
+        ).toBe(2);
+      } finally {
+        await rm(directory, { recursive: true });
+      }
+    },
+  );
 
-  it("returns the validated manifest from the canonical filesystem boundary", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
-    try {
-      await Promise.all([
-        writeFile(join(directory, "moura.yaml"), validManifest),
-        writeFile(join(directory, "req.md"), validRequirement),
-        writeFile(join(directory, "spec.md"), validSpecification),
-      ]);
-      const loaded = await loadProjectDirectory(directory);
-      expect(loaded.errors).toEqual([]);
-      expect(loaded.manifest?.requirements[0]?.localId).toBe("REQ-001");
-    } finally {
-      await rm(directory, { recursive: true });
-    }
-  });
+  it(
+    mouraEvidenceName(
+      "returns the validated manifest from the canonical filesystem boundary",
+      ["REQ-001/SCN-001/CASE-001"],
+      "integration",
+    ),
+    async () => {
+      const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
+      try {
+        await Promise.all([
+          writeFile(join(directory, "moura.yaml"), validManifest),
+          writeFile(join(directory, "req.md"), validRequirement),
+          writeFile(join(directory, "spec.md"), validSpecification),
+        ]);
+        const loaded = await loadProjectDirectory(directory);
+        expect(loaded.errors).toEqual([]);
+        expect(loaded.manifest?.requirements[0]?.localId).toBe("REQ-001");
+      } finally {
+        await rm(directory, { recursive: true });
+      }
+    },
+  );
 
   it("rejects source paths outside the project directory before reading", async () => {
     const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
@@ -725,6 +791,36 @@ describe("Markdown hierarchy and canonical matching", () => {
       ).errors.some((item) => item.code === "missing-specification-case"),
     ).toBeTruthy();
   });
+
+  it(
+    mouraEvidenceName(
+      "rejects invalid hierarchy and unmanaged IDs through the filesystem boundary",
+      ["REQ-001/SCN-001/CASE-004", "REQ-001/SCN-001/CASE-013"],
+      "integration",
+    ),
+    async () => {
+      const directory = await mkdtemp(join(tmpdir(), "moura-test-"));
+      try {
+        await Promise.all([
+          writeFile(join(directory, "moura.yaml"), validManifest),
+          writeFile(join(directory, "req.md"), validRequirement),
+          writeFile(
+            join(directory, "spec.md"),
+            "## REQ-001\n### SCN-OTHER\n#### CASE-001\n### SCN-001\n",
+          ),
+        ]);
+        const loaded = await loadProjectDirectory(directory);
+        expect(loaded.errors.map((item) => item.code)).toEqual(
+          expect.arrayContaining([
+            "missing-specification-case",
+            "unmanaged-markdown-id",
+          ]),
+        );
+      } finally {
+        await rm(directory, { recursive: true });
+      }
+    },
+  );
 
   it("detects every reserved Moura ID prefix in requirement sources", () => {
     for (const id of ["REQ-999", "SCN-999", "CASE-999"]) {

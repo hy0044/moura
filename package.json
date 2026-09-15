@@ -45,6 +45,7 @@
     "test:coverage": "vitest run --coverage",
     "test:allure": "node scripts/test-allure.mjs",
     "report:allure": "node scripts/report-allure.mjs && allure generate --output allure-report",
+    "report:moura": "node dist/cli.js report .",
     "quality:site": "node scripts/build-quality-site.mjs",
     "quality:summary": "node scripts/write-ci-summary.mjs",
     "test:package": "node scripts/package-smoke.mjs",

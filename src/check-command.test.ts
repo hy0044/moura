@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { checkProjectDirectory } from "./check-command.js";
+import { mouraEvidenceName } from "./test-support/moura-evidence.js";
 
 const directories: string[] = [];
 
@@ -67,6 +68,53 @@ function allure(
 }
 
 describe("check project command", () => {
+  it(
+    mouraEvidenceName(
+      "aggregates multiple records and layers through the filesystem command",
+      ["REQ-002/SCN-001/CASE-005"],
+      "integration",
+    ),
+    async () => {
+      const directory = await project();
+      await writeFile(
+        join(directory, "moura.yaml"),
+        `
+version: 1
+sources: { requirements: [req.md], specifications: [spec.md] }
+verification: { layers: [unit, integration] }
+requirements:
+  - id: REQ-001
+    scenarios:
+      - id: SCN-001
+        cases:
+          - { id: CASE-001, verify: [unit, integration] }
+`,
+      );
+      const results = join(directory, "allure-results");
+      await mkdir(results);
+      await Promise.all([
+        writeFile(
+          join(results, "a-result.json"),
+          JSON.stringify(allure("skipped")),
+        ),
+        writeFile(
+          join(results, "b-result.json"),
+          JSON.stringify(allure("passed")),
+        ),
+        writeFile(
+          join(results, "c-result.json"),
+          JSON.stringify({
+            ...allure("passed"),
+            labels: [
+              { name: "moura_case", value: "REQ-001/SCN-001/CASE-001" },
+              { name: "moura_layer", value: "integration" },
+            ],
+          }),
+        ),
+      ]);
+      expect((await checkProjectDirectory(directory)).exitCode).toBe(0);
+    },
+  );
   it.each([
     ["passed", "PASS", 0],
     ["failed", "FAIL", 1],

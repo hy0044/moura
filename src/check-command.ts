@@ -5,6 +5,8 @@ import {
   type EvidenceAdapterResult,
 } from "./adapters/allure.js";
 import { checkVerification } from "./check.js";
+import type { EvidenceIssue, VerificationProjectCheckResult } from "./check.js";
+import type { MouraManifest } from "./manifest.js";
 import { loadProjectDirectory } from "./project.js";
 
 export interface CheckCommandOutput {
@@ -17,26 +19,71 @@ export interface CheckCommandDependencies {
   readonly loadEvidence?: (directory: string) => Promise<EvidenceAdapterResult>;
 }
 
+export function formatEvidenceAdapterIssue(
+  issue: EvidenceAdapterResult["issues"][number],
+): string {
+  const source = issue.source === undefined ? "" : `${issue.source}: `;
+  return `${issue.code}: ${source}${issue.message}`;
+}
+
+export function formatEvidenceIssue(issue: EvidenceIssue): string {
+  const target = issue.canonicalId ?? "(no Case ID)";
+  return `${issue.code}: ${target} [${issue.layer}]: ${issue.message}`;
+}
+
+export type ProjectCheckEvaluation =
+  | {
+      readonly kind: "invalid-project";
+      readonly errors: readonly string[];
+    }
+  | {
+      readonly kind: "checked";
+      readonly manifest: MouraManifest;
+      readonly check: VerificationProjectCheckResult;
+      readonly adapterIssues: EvidenceAdapterResult["issues"];
+    };
+
+/** Shared filesystem evaluation used by both human CLI and artifact renderers. */
+export async function evaluateProjectDirectory(
+  directory: string,
+  dependencies: CheckCommandDependencies = {},
+): Promise<ProjectCheckEvaluation> {
+  const project = await loadProjectDirectory(directory);
+  if (!project.manifest)
+    return {
+      kind: "invalid-project",
+      errors: project.errors.map((problem) => problem.message),
+    };
+
+  const loadEvidence = dependencies.loadEvidence ?? loadAllureResultsDirectory;
+  const adapted = await loadEvidence(resolve(directory, "allure-results"));
+  return {
+    kind: "checked",
+    manifest: project.manifest,
+    check: checkVerification(project.manifest, adapted.evidence),
+    adapterIssues: adapted.issues,
+  };
+}
+
 /** Filesystem command boundary; the check core remains adapter-neutral and pure. */
 export async function checkProjectDirectory(
   directory: string,
   dependencies: CheckCommandDependencies = {},
 ): Promise<CheckCommandOutput> {
-  const project = await loadProjectDirectory(directory);
-  if (!project.manifest) {
+  const evaluation = await evaluateProjectDirectory(directory, dependencies);
+  if (evaluation.kind === "invalid-project") {
     return {
       exitCode: 1,
       stdout: [],
       stderr: [
         "✗ Traceability validation failed",
-        ...project.errors.map((problem) => `- ${problem.message}`),
+        ...evaluation.errors.map((message) => `- ${message}`),
       ],
     };
   }
 
-  const loadEvidence = dependencies.loadEvidence ?? loadAllureResultsDirectory;
-  const adapted = await loadEvidence(resolve(directory, "allure-results"));
-  const checked = checkVerification(project.manifest, adapted.evidence);
+  const adapted = { issues: evaluation.adapterIssues };
+  const checked = evaluation.check;
   const stdout = checked.entries.map(
     (entry) => `${entry.status} ${entry.caseId} [${entry.layer}]`,
   );
@@ -44,17 +91,13 @@ export async function checkProjectDirectory(
   if (adapted.issues.length > 0) {
     stderr.push("✗ Evidence adapter issues");
     for (const issue of adapted.issues) {
-      const source = issue.source === undefined ? "" : `${issue.source}: `;
-      stderr.push(`- ${issue.code}: ${source}${issue.message}`);
+      stderr.push(`- ${formatEvidenceAdapterIssue(issue)}`);
     }
   }
   if (checked.evidenceIssues.length > 0) {
     stderr.push("✗ Semantic evidence issues");
     for (const issue of checked.evidenceIssues) {
-      const target = issue.canonicalId ?? "(no Case ID)";
-      stderr.push(
-        `- ${issue.code}: ${target} [${issue.layer}]: ${issue.message}`,
-      );
+      stderr.push(`- ${formatEvidenceIssue(issue)}`);
     }
   }
 

@@ -120,13 +120,13 @@ describe("CLI", () => {
     }
   });
 
-  it("lists validate as available and only unimplemented commands as planned", async () => {
+  it("lists every available command", async () => {
     for (const args of [[], ["--help"]]) {
       const help = await run(args, process.cwd());
       expect(help.status, help.stderr).toBe(0);
-      expect(help.stdout).toMatch(/^Available commands: validate, check\.$/mu);
-      expect(help.stdout).toMatch(/^Planned commands: report\.$/mu);
-      expect(help.stdout).not.toMatch(/^Planned commands:.*validate/mu);
+      expect(help.stdout).toMatch(
+        /^Available commands: validate, check, report\.$/mu,
+      );
     }
   });
 
@@ -159,6 +159,46 @@ describe("CLI", () => {
     const result = await run(["check", "a", "b"], process.cwd());
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Usage: moura check [directory]");
+  });
+
+  it("generates a requirement coverage report for an explicit project", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-cli-test-"));
+    try {
+      const project = join(directory, "project");
+      await writeValidProject(project);
+      await writeEvidence(project);
+      const result = await run(["report", "project"], directory);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("Requirement coverage report");
+      expect(
+        await readFile(join(project, "moura-report/index.html"), "utf8"),
+      ).toContain("REQ-001/SCN-001/CASE-001");
+    } finally {
+      await rm(directory, { recursive: true });
+    }
+  });
+
+  it("displays semantic evidence diagnostics when report generation fails", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-cli-test-"));
+    try {
+      await writeValidProject(directory);
+      await writeEvidence(directory, "passed", "REQ-999/SCN-001/CASE-001");
+      const result = await run(["report"], directory);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("unknown-evidence-id");
+      expect(result.stderr).toContain("REQ-999/SCN-001/CASE-001 [unit]");
+      expect(
+        await readFile(join(directory, "moura-report/index.html"), "utf8"),
+      ).toContain("unknown-evidence-id");
+    } finally {
+      await rm(directory, { recursive: true });
+    }
+  });
+
+  it("rejects extra report arguments", async () => {
+    const result = await run(["report", "a", "b"], process.cwd());
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Usage: moura report [directory]");
   });
 
   it("preserves version behavior", async () => {

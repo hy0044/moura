@@ -1,5 +1,7 @@
 export * from "./check.js";
 export * from "./check-command.js";
+export * from "./coverage.js";
+export * from "./report.js";
 export * from "./adapters/allure.js";
 export * from "./id.js";
 export * from "./model.js";
