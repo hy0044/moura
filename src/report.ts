@@ -6,6 +6,7 @@ import type { EvidenceAdapterIssue } from "./adapters/allure.js";
 import type { VerificationProjectCheckResult } from "./check.js";
 import {
   evaluateProjectDirectory,
+  formatEvidenceAdapterIssue,
   formatEvidenceIssue,
   type CheckCommandDependencies,
 } from "./check-command.js";
@@ -58,9 +59,7 @@ export async function reportProjectDirectory(
         : 1,
     outputPath,
     errors: [
-      ...evaluation.adapterIssues.map(
-        (issue) => `${issue.code}: ${issue.message}`,
-      ),
+      ...evaluation.adapterIssues.map(formatEvidenceAdapterIssue),
       ...semanticErrors,
     ],
   };
@@ -194,7 +193,7 @@ export function renderCoverageReport(
     })
     .join("");
   const issues = [
-    ...adapterIssues.map((issue) => `${issue.code}: ${issue.message}`),
+    ...adapterIssues.map(formatEvidenceAdapterIssue),
     ...check.evidenceIssues.map((issue) => `${issue.code}: ${issue.message}`),
   ];
   const issueHtml =
