@@ -108,9 +108,10 @@ Canonical IDs are intentionally omitted and derived from the nesting. Layer name
 ```sh
 moura validate [directory] # validate moura.yaml and its configured Markdown sources
 moura check [directory]    # check existing Allure evidence
+moura report [directory]   # write <project>/moura-report/index.html
 ```
 
-Both commands use the current working directory by default, or a supplied relative or absolute project directory. `moura check` first validates the project, then consumes existing evidence from `<project>/allure-results/`; it does not run tests or generate evidence. Every required Case × verification-layer point must be `PASS`, with no adapter or semantic evidence issues, for the command to succeed.
+All commands use the current working directory by default, or a supplied relative or absolute project directory. `moura check` first validates the project, then consumes existing evidence from `<project>/allure-results/`; it does not run tests or generate evidence. Every required Case × verification-layer point must be `PASS`, with no adapter or semantic evidence issues, for the check command to succeed. `moura report` consumes the same structured result and produces deterministic static HTML without running tests.
 
 Allure results associate evidence using one or more `moura_case` labels containing canonical Case IDs and exactly one `moura_layer` label. See the [Allure evidence adapter contract](docs/check.md#allure-evidence-adapter) for supported statuses and input details.
 
@@ -129,6 +130,7 @@ pnpm test # run the TypeScript test suite with Vitest
 pnpm test:coverage # run tests and create coverage HTML/JSON/LCOV
 pnpm test:allure # run the same suite and verify generated Allure results
 pnpm report:allure # create static Allure Report 3 HTML from allure-results
+pnpm build && pnpm report:moura # create static Requirement Coverage HTML
 ```
 
 `pnpm test` is the fast local test command and does not create persistent test
@@ -137,7 +139,7 @@ integration, then checks the emitted Moura metadata. Moura targets Allure Report
 3+. Report generation remains a separate command so existing result validation
 and static HTML generation have clear responsibilities.
 
-The repository currently annotates only the representative evidence-aggregation tests used to dogfood the Allure integration. Consequently, `node dist/cli.js check` intentionally reports `MISSING` for the remaining required points until those points have natural evidence-producing tests; Moura does not synthesize passing evidence.
+The repository annotates real validation and checking tests to dogfood its declared verification contract. These declarations are reviewed mappings to test behavior; Moura never synthesizes passing evidence.
 
 Evidence-producing tests use the Moura-owned custom Allure labels
 `moura_case` and `moura_layer`. They are not built-in Allure identity or suite
@@ -145,14 +147,17 @@ semantics: repeated `moura_case` labels will map to future
 `Evidence.covers[]`, while the exactly one `moura_layer` label will map to future
 `Evidence.layer`. Case IDs and layer values must come from `moura.yaml`.
 
-The executable exposes `validate`, `check`, version, and help commands. Domain types and canonical-ID construction are also exported for integrations.
+The executable exposes `validate`, `check`, `report`, version, and help commands. Domain types, coverage aggregation, report rendering, and canonical-ID construction are also exported for integrations.
 
 ## Quality reports
 
 Latest successful `main` branch reports:
 
-- [Test coverage](https://hy0044.github.io/moura/coverage/)
+- [Requirement Coverage](https://hy0044.github.io/moura/moura/)
 - [Allure Report](https://hy0044.github.io/moura/allure/)
+- [Code coverage](https://hy0044.github.io/moura/coverage/)
+
+Requirement Coverage rolls up authoritative pair results: only `PASS` is covered; every required layer must pass for a Case, every Case for a Scenario, and every Scenario for a Requirement. `FAIL`, `BROKEN`, `SKIPPED`, and `MISSING` remain visible gaps. **Moura verifies declared traceability and its evidence; it does not prove that a test semantically verifies the specification it declares.**
 
 These static reports are produced by CI; pull requests retain their reports as
 workflow artifacts without replacing the public site.

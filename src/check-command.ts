@@ -5,6 +5,8 @@ import {
   type EvidenceAdapterResult,
 } from "./adapters/allure.js";
 import { checkVerification } from "./check.js";
+import type { VerificationProjectCheckResult } from "./check.js";
+import type { MouraManifest } from "./manifest.js";
 import { loadProjectDirectory } from "./project.js";
 
 export interface CheckCommandOutput {
@@ -17,26 +19,59 @@ export interface CheckCommandDependencies {
   readonly loadEvidence?: (directory: string) => Promise<EvidenceAdapterResult>;
 }
 
+export type ProjectCheckEvaluation =
+  | {
+      readonly kind: "invalid-project";
+      readonly errors: readonly string[];
+    }
+  | {
+      readonly kind: "checked";
+      readonly manifest: MouraManifest;
+      readonly check: VerificationProjectCheckResult;
+      readonly adapterIssues: EvidenceAdapterResult["issues"];
+    };
+
+/** Shared filesystem evaluation used by both human CLI and artifact renderers. */
+export async function evaluateProjectDirectory(
+  directory: string,
+  dependencies: CheckCommandDependencies = {},
+): Promise<ProjectCheckEvaluation> {
+  const project = await loadProjectDirectory(directory);
+  if (!project.manifest)
+    return {
+      kind: "invalid-project",
+      errors: project.errors.map((problem) => problem.message),
+    };
+
+  const loadEvidence = dependencies.loadEvidence ?? loadAllureResultsDirectory;
+  const adapted = await loadEvidence(resolve(directory, "allure-results"));
+  return {
+    kind: "checked",
+    manifest: project.manifest,
+    check: checkVerification(project.manifest, adapted.evidence),
+    adapterIssues: adapted.issues,
+  };
+}
+
 /** Filesystem command boundary; the check core remains adapter-neutral and pure. */
 export async function checkProjectDirectory(
   directory: string,
   dependencies: CheckCommandDependencies = {},
 ): Promise<CheckCommandOutput> {
-  const project = await loadProjectDirectory(directory);
-  if (!project.manifest) {
+  const evaluation = await evaluateProjectDirectory(directory, dependencies);
+  if (evaluation.kind === "invalid-project") {
     return {
       exitCode: 1,
       stdout: [],
       stderr: [
         "✗ Traceability validation failed",
-        ...project.errors.map((problem) => `- ${problem.message}`),
+        ...evaluation.errors.map((message) => `- ${message}`),
       ],
     };
   }
 
-  const loadEvidence = dependencies.loadEvidence ?? loadAllureResultsDirectory;
-  const adapted = await loadEvidence(resolve(directory, "allure-results"));
-  const checked = checkVerification(project.manifest, adapted.evidence);
+  const adapted = { issues: evaluation.adapterIssues };
+  const checked = evaluation.check;
   const stdout = checked.entries.map(
     (entry) => `${entry.status} ${entry.caseId} [${entry.layer}]`,
   );

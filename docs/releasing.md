@@ -18,7 +18,9 @@ authorization.
    pnpm test:allure
    pnpm report:allure
    pnpm build
-   node dist/cli.js validate
+   node dist/cli.js validate .
+   node dist/cli.js check .
+   pnpm report:moura
    node dist/cli.js check test/fixtures/passing-project
    pnpm pack --dry-run
    pnpm test:package

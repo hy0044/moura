@@ -51,6 +51,23 @@ jobs:
       - name: Generate Allure HTML report
         run: pnpm report:allure
 
+      - name: Build
+        run: pnpm build
+
+      - name: Validate Moura repository
+        run: node dist/cli.js validate .
+
+      - name: Moura self-check
+        run: node dist/cli.js check .
+
+      - name: Generate Moura Requirement Coverage report
+        run: pnpm report:moura
+
+      - name: Verify Moura Requirement Coverage report identity
+        run: |
+          test -f moura-report/index.html
+          grep -F 'REQ-001/SCN-001/CASE-001' moura-report/index.html
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -65,16 +82,17 @@ jobs:
           path: allure-report/
           retention-days: 14
 
+      - name: Upload Moura Requirement Coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: moura-report
+          path: moura-report/
+          retention-days: 14
+
       - name: Write quality job summary
         run: pnpm quality:summary
 
-      - name: Build
-        run: pnpm build
-
-      - name: Validate Moura traceability
-        run: node dist/cli.js validate
-
-      - name: Check passing Moura project
+      - name: Fixture check smoke
         run: node dist/cli.js check test/fixtures/passing-project
 
       - name: Check package contents
