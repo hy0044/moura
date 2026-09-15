@@ -1,4 +1,11 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -101,8 +108,74 @@ requirements:
       }),
     });
     expect(result.exitCode).toBe(1);
+    expect(result.errors).toEqual([
+      expect.stringContaining(
+        'unknown-evidence-id: unknown [unit]: Evidence refers to unknown canonical ID "unknown"',
+      ),
+    ]);
     expect(await readFile(result.outputPath!, "utf8")).toContain(
       "unknown-evidence-id",
     );
   });
+
+  it("rejects a symlinked report directory without writing outside the project", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "moura-report-test-"));
+    directories.push(parent);
+    const directory = join(parent, "project");
+    const outside = join(parent, "outside");
+    await writeProject(directory);
+    await mkdir(outside);
+    await writeFile(join(outside, "index.html"), "outside sentinel");
+    await symlink(outside, join(directory, "moura-report"), "junction");
+
+    const result = await reportProjectDirectory(directory);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.outputPath).toBeUndefined();
+    expect(result.errors.join("\n")).toContain("must not be a symbolic link");
+    expect(await readFile(join(outside, "index.html"), "utf8")).toBe(
+      "outside sentinel",
+    );
+  });
+
+  it("rejects a symlinked report entry point without overwriting its target", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "moura-report-test-"));
+    directories.push(parent);
+    const directory = join(parent, "project");
+    const outside = join(parent, "outside.html");
+    await writeProject(directory);
+    await mkdir(join(directory, "moura-report"));
+    await writeFile(outside, "outside sentinel");
+    await symlink(outside, join(directory, "moura-report", "index.html"));
+
+    const result = await reportProjectDirectory(directory);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.outputPath).toBeUndefined();
+    expect(result.errors.join("\n")).toContain(
+      "index.html must not be a symbolic link",
+    );
+    expect(await readFile(outside, "utf8")).toBe("outside sentinel");
+  });
 });
+
+async function writeProject(directory: string): Promise<void> {
+  await mkdir(join(directory, "allure-results"), { recursive: true });
+  await Promise.all([
+    writeFile(
+      join(directory, "moura.yaml"),
+      `version: 1
+sources: { requirements: [req.md], specifications: [spec.md] }
+verification: { layers: [unit] }
+requirements:
+  - id: R
+    scenarios:
+      - id: S
+        cases:
+          - { id: C, verify: [unit] }
+`,
+    ),
+    writeFile(join(directory, "req.md"), "## R\n"),
+    writeFile(join(directory, "spec.md"), "## R\n### S\n#### C\n"),
+  ]);
+}

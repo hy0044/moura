@@ -5,7 +5,7 @@ import {
   type EvidenceAdapterResult,
 } from "./adapters/allure.js";
 import { checkVerification } from "./check.js";
-import type { VerificationProjectCheckResult } from "./check.js";
+import type { EvidenceIssue, VerificationProjectCheckResult } from "./check.js";
 import type { MouraManifest } from "./manifest.js";
 import { loadProjectDirectory } from "./project.js";
 
@@ -17,6 +17,11 @@ export interface CheckCommandOutput {
 
 export interface CheckCommandDependencies {
   readonly loadEvidence?: (directory: string) => Promise<EvidenceAdapterResult>;
+}
+
+export function formatEvidenceIssue(issue: EvidenceIssue): string {
+  const target = issue.canonicalId ?? "(no Case ID)";
+  return `${issue.code}: ${target} [${issue.layer}]: ${issue.message}`;
 }
 
 export type ProjectCheckEvaluation =
@@ -86,10 +91,7 @@ export async function checkProjectDirectory(
   if (checked.evidenceIssues.length > 0) {
     stderr.push("✗ Semantic evidence issues");
     for (const issue of checked.evidenceIssues) {
-      const target = issue.canonicalId ?? "(no Case ID)";
-      stderr.push(
-        `- ${issue.code}: ${target} [${issue.layer}]: ${issue.message}`,
-      );
+      stderr.push(`- ${formatEvidenceIssue(issue)}`);
     }
   }
 

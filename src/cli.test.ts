@@ -178,6 +178,23 @@ describe("CLI", () => {
     }
   });
 
+  it("displays semantic evidence diagnostics when report generation fails", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-cli-test-"));
+    try {
+      await writeValidProject(directory);
+      await writeEvidence(directory, "passed", "REQ-999/SCN-001/CASE-001");
+      const result = await run(["report"], directory);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("unknown-evidence-id");
+      expect(result.stderr).toContain("REQ-999/SCN-001/CASE-001 [unit]");
+      expect(
+        await readFile(join(directory, "moura-report/index.html"), "utf8"),
+      ).toContain("unknown-evidence-id");
+    } finally {
+      await rm(directory, { recursive: true });
+    }
+  });
+
   it("rejects extra report arguments", async () => {
     const result = await run(["report", "a", "b"], process.cwd());
     expect(result.status).toBe(1);
