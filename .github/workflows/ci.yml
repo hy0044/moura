@@ -57,9 +57,6 @@ jobs:
       - name: Validate Moura repository
         run: node dist/cli.js validate .
 
-      - name: Moura self-check
-        run: node dist/cli.js check .
-
       - name: Generate Moura Requirement Coverage report
         run: pnpm report:moura
 
@@ -69,25 +66,35 @@ jobs:
           grep -F 'REQ-001/SCN-001/CASE-001' moura-report/index.html
 
       - name: Upload coverage report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
           retention-days: 14
+          if-no-files-found: warn
 
       - name: Upload Allure report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: allure-report/
           retention-days: 14
+          if-no-files-found: warn
 
       - name: Upload Moura Requirement Coverage report
+        if: always() && hashFiles('moura-report/index.html') != ''
         uses: actions/upload-artifact@v4
         with:
           name: moura-report
           path: moura-report/
           retention-days: 14
+          if-no-files-found: error
+
+      - name: Moura self-check
+        if: always()
+        run: node dist/cli.js check .
 
       - name: Write quality job summary
         run: pnpm quality:summary
