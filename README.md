@@ -2,7 +2,7 @@
 
 Moura is an open-source, Git-native CLI for checking traceability between requirements, specifications, and test evidence, and for reporting verification coverage. It does not own the requirements or specifications: it connects the documents already reviewed in Git with evidence produced by test tools.
 
-> **Status:** Moura is in early development. Static project validation and Allure-backed evidence checking are available; reporting is not implemented yet.
+> **Status:** Moura is in early development. Static project validation, Allure-backed evidence checking, and static Requirement Coverage reporting from the current project model and evidence are available.
 
 ## First run
 
