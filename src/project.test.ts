@@ -124,6 +124,45 @@ describe("manifest parsing and validation", () => {
     () => expect(validate().errors).toEqual([]),
   );
 
+  it("rejects unsafe local IDs and verification-layer names at the project boundary", () => {
+    for (const escaped of [
+      "\\u0000",
+      "\\u0001",
+      "\\u007f",
+      "\\u009f",
+      "\\ud800",
+      "\\udfff",
+    ]) {
+      for (const id of ["REQ-001", "SCN-001", "CASE-001"])
+        expect(
+          codes(validManifest.replace(id, `"${id}-${escaped}"`)),
+        ).toContain("invalid-local-id");
+      expect(
+        codes(
+          validManifest
+            .replace("[unit]", `["layer-${escaped}"]`)
+            .replace("verify: [unit]", `verify: ["layer-${escaped}"]`),
+        ),
+      ).toContain("invalid-verification-layer");
+    }
+  });
+
+  it("accepts ordinary and supplementary Unicode identifiers and layer names", () => {
+    const result = validate(
+      validManifest
+        .replaceAll("REQ-001", "要件-一")
+        .replaceAll("SCN-001", "場面-😀")
+        .replaceAll("CASE-001", "事例-𠮷")
+        .replaceAll("unit", "層-🚀"),
+      validRequirement.replace("REQ-001", "要件-一"),
+      validSpecification
+        .replace("REQ-001", "要件-一")
+        .replace("SCN-001", "場面-😀")
+        .replace("CASE-001", "事例-𠮷"),
+    );
+    expect(result.errors).toEqual([]);
+  });
+
   it(
     mouraEvidenceName(
       "rejects a missing or unsupported version",

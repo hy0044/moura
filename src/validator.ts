@@ -1,4 +1,4 @@
-import { canonicalId, localId } from "./id.js";
+import { canonicalId, interoperableStringError, localId } from "./id.js";
 import type { MouraManifest } from "./manifest.js";
 import type { MarkdownDocument } from "./markdown.js";
 import type { TraceNode } from "./model.js";
@@ -21,6 +21,17 @@ export function validateStructure(
     "sources.requirements must contain at least one source",
     errors,
   );
+
+  for (const layer of manifest.verificationLayers) {
+    const reason = interoperableStringError(layer);
+    if (reason)
+      errors.push(
+        error(
+          "invalid-verification-layer",
+          `verification layer ${JSON.stringify(layer)} is invalid: ${reason}`,
+        ),
+      );
+  }
   nonEmpty(
     manifest.sources.specifications,
     "missing-specification-source",

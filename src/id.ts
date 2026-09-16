@@ -2,6 +2,9 @@ import type { NodeKind, TraceNode } from "./model.js";
 
 const SEPARATOR = "/";
 
+/** Control code points are not portable across Moura's serialization boundaries. */
+const UNICODE_CONTROL = /\p{Cc}/u;
+
 export type LocalId = string;
 export type CanonicalId = string;
 
@@ -29,7 +32,29 @@ export function localId(value: string): LocalId {
   if (/\p{White_Space}/u.test(value)) {
     throw new InvalidLocalIdError(value, "must not contain whitespace");
   }
+  const unsafeReason = interoperableStringError(value);
+  if (unsafeReason) throw new InvalidLocalIdError(value, unsafeReason);
   return value;
+}
+
+/**
+ * Returns why a Moura identifier-like string cannot safely cross its supported
+ * UTF-8, YAML, Markdown, HTML, and tooling boundaries.
+ */
+export function interoperableStringError(value: string): string | undefined {
+  if (UNICODE_CONTROL.test(value))
+    return "must not contain Unicode control characters (General_Category=Cc)";
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) index += 1;
+      else return "must not contain unpaired UTF-16 surrogates";
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      return "must not contain unpaired UTF-16 surrogates";
+    }
+  }
+  return undefined;
 }
 
 /** The single construction point for logical canonical IDs. */

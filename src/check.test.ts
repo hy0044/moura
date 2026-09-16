@@ -218,7 +218,7 @@ requirements:
         requirements: ["req.md"],
         specifications: ["spec.md"],
       },
-      verificationLayers: ["y\0z", "z", "other"],
+      verificationLayers: ["y|z", "z", "other"],
       requirements: [
         {
           kind: "requirement",
@@ -228,8 +228,8 @@ requirements:
               kind: "scenario",
               localId: "s",
               cases: [
-                { kind: "case", localId: "x", verify: ["y\0z"] },
-                { kind: "case", localId: "x\0y", verify: ["other"] },
+                { kind: "case", localId: "x", verify: ["y|z"] },
+                { kind: "case", localId: "x|y", verify: ["other"] },
               ],
             },
           ],
@@ -238,7 +238,7 @@ requirements:
     };
 
     const result = checkVerification(collisionManifest, [
-      { covers: ["r/s/x\0y"], layer: "z", status: "passed" },
+      { covers: ["r/s/x|y"], layer: "z", status: "passed" },
     ]);
 
     expect(

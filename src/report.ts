@@ -202,7 +202,7 @@ export function renderCoverageReport(
     .join("");
   const issues = [
     ...adapterIssues.map(formatEvidenceAdapterIssue),
-    ...check.evidenceIssues.map((issue) => `${issue.code}: ${issue.message}`),
+    ...check.evidenceIssues.map(formatEvidenceIssue),
   ];
   const issueHtml =
     issues.length === 0
@@ -230,14 +230,7 @@ function title(value: string): string {
     : value[0]!.toUpperCase() + value.slice(1);
 }
 function renderText(value: string): string {
-  return escapeHtml(escapeForDisplay(value));
-}
-function escapeForDisplay(value: string): string {
-  return value.replace(/[\\\p{Cc}]/gu, (character) =>
-    character === "\\"
-      ? "\\\\"
-      : `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
-  );
+  return escapeHtml(value);
 }
 function escapeHtml(value: string): string {
   return value
