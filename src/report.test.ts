@@ -69,15 +69,15 @@ describe("requirement coverage report", () => {
     expect(first).toContain("0 / 1 (0%)");
   });
 
-  it("renders colliding NUL-containing Case × layer pairs independently", () => {
+  it("renders colliding control-containing identities visibly and unambiguously", () => {
     const collisionManifest: MouraManifest = {
       version: 1,
       sources: { requirements: ["req.md"], specifications: ["spec.md"] },
-      verificationLayers: ["y\0<z>", "<z>"],
+      verificationLayers: ["y\0<z>", "<z>", "layer�", "layer\\u0000"],
       requirements: [
         {
           kind: "requirement",
-          localId: "r",
+          localId: "r\\oot",
           scenarios: [
             {
               kind: "scenario",
@@ -85,6 +85,12 @@ describe("requirement coverage report", () => {
               cases: [
                 { kind: "case", localId: "x", verify: ["y\0<z>"] },
                 { kind: "case", localId: "x\0y", verify: ["<z>"] },
+                { kind: "case", localId: "x�y", verify: ["layer�"] },
+                {
+                  kind: "case",
+                  localId: "x\\u0000y",
+                  verify: ["layer\\u0000"],
+                },
               ],
             },
           ],
@@ -92,19 +98,33 @@ describe("requirement coverage report", () => {
       ],
     };
     const checked = checkVerification(collisionManifest, [
-      { covers: ["r/s/x"], layer: "y\0<z>", status: "passed" },
-      { covers: ["r/s/x\0y"], layer: "<z>", status: "failed" },
+      { covers: ["r\\oot/s/x"], layer: "y\0<z>", status: "passed" },
+      { covers: ["r\\oot/s/x\0y"], layer: "<z>", status: "failed" },
+      { covers: ["r\\oot/s/x�y"], layer: "layer�", status: "broken" },
+      {
+        covers: ["r\\oot/s/x\\u0000y"],
+        layer: "layer\\u0000",
+        status: "skipped",
+      },
     ]);
 
     const html = renderCoverageReport(collisionManifest, checked);
 
+    expect(renderCoverageReport(collisionManifest, checked)).toBe(html);
     expect(html).toContain(
-      '<h4>r/s/x</h4><ul><li><code>y\0&lt;z&gt;</code> <span class="status pass">PASS</span>',
+      '<h4>r\\\\oot/s/x</h4><ul><li><code>y\\u0000&lt;z&gt;</code> <span class="status pass">PASS</span>',
     );
     expect(html).toContain(
-      '<h4>r/s/x\0y</h4><ul><li><code>&lt;z&gt;</code> <span class="status fail">FAIL</span>',
+      '<h4>r\\\\oot/s/x\\u0000y</h4><ul><li><code>&lt;z&gt;</code> <span class="status fail">FAIL</span>',
     );
-    expect(html).not.toContain("<code>y\0<z></code>");
+    expect(html).toContain(
+      '<h4>r\\\\oot/s/x�y</h4><ul><li><code>layer�</code> <span class="status broken">BROKEN</span>',
+    );
+    expect(html).toContain(
+      '<h4>r\\\\oot/s/x\\\\u0000y</h4><ul><li><code>layer\\\\u0000</code> <span class="status skipped">SKIPPED</span>',
+    );
+    expect(html).not.toContain("\0");
+    expect(html).not.toContain("<code>y\\u0000<z></code>");
   });
 
   it("rejects an invalid project without writing a report", async () => {
@@ -166,8 +186,8 @@ requirements:
         issues: [
           {
             code: "malformed-json",
-            message: "Invalid <JSON>",
-            source: "broken-result.json",
+            message: "Invalid <JSON>\0\\u0000",
+            source: "broken\0-result.json",
           },
           { code: "unreadable-results-directory", message: "Cannot read" },
         ],
@@ -176,13 +196,14 @@ requirements:
 
     expect(result.exitCode).toBe(1);
     expect(result.errors).toEqual([
-      "malformed-json: broken-result.json: Invalid <JSON>",
+      "malformed-json: broken\0-result.json: Invalid <JSON>\0\\u0000",
       "unreadable-results-directory: Cannot read",
     ]);
     const html = await readFile(result.outputPath!, "utf8");
     expect(html).toContain(
-      "malformed-json: broken-result.json: Invalid &lt;JSON&gt;",
+      "malformed-json: broken\\u0000-result.json: Invalid &lt;JSON&gt;\\u0000\\\\u0000",
     );
+    expect(html).not.toContain("\0");
     expect(html).toContain("unreadable-results-directory: Cannot read");
     expect(html).not.toContain("undefined");
   });
