@@ -3,7 +3,11 @@ import { lstat, mkdir, open, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import type { EvidenceAdapterIssue } from "./adapters/allure.js";
-import type { VerificationProjectCheckResult } from "./check.js";
+import type {
+  VerificationCheckStatus,
+  VerificationProjectCheckResult,
+} from "./check.js";
+import type { CanonicalId } from "./id.js";
 import {
   evaluateProjectDirectory,
   formatEvidenceAdapterIssue,
@@ -17,6 +21,7 @@ import {
 } from "./coverage.js";
 import { canonicalId } from "./id.js";
 import type { MouraManifest } from "./manifest.js";
+import type { VerificationLayer } from "./model.js";
 
 export interface ReportCommandOutput {
   readonly exitCode: 0 | 1;
@@ -142,12 +147,15 @@ export function renderCoverageReport(
   adapterIssues: readonly EvidenceAdapterIssue[] = [],
 ): string {
   const summary = summarizeCoverage(manifest, check);
-  const entries = new Map(
-    check.entries.map((entry) => [
-      `${entry.caseId}\0${entry.layer}`,
-      entry.status,
-    ]),
-  );
+  const entries = new Map<
+    CanonicalId,
+    Map<VerificationLayer, VerificationCheckStatus>
+  >();
+  for (const entry of check.entries) {
+    const layers = entries.get(entry.caseId) ?? new Map();
+    layers.set(entry.layer, entry.status);
+    entries.set(entry.caseId, layers);
+  }
   const cards = (["requirements", "scenarios", "cases", "pairs"] as const)
     .map(
       (key) =>
@@ -175,7 +183,7 @@ export function renderCoverageReport(
               const caseId = canonicalId([requirement, scenario, testCase]);
               const statuses = testCase.verify
                 .map((layer) => {
-                  const status = entries.get(`${caseId}\0${layer}`);
+                  const status = entries.get(caseId)?.get(layer);
                   if (!status)
                     throw new Error(
                       `Check result omitted required pair ${caseId} × ${layer}`,

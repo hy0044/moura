@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { checkVerification } from "./check.js";
-import { parseManifest } from "./manifest.js";
+import { parseManifest, type MouraManifest } from "./manifest.js";
 import { renderCoverageReport, reportProjectDirectory } from "./report.js";
 
 const directories: string[] = [];
@@ -67,6 +67,44 @@ describe("requirement coverage report", () => {
     expect(first).toContain("Per-layer coverage");
     expect(first).toContain("REQ-A&amp;amp;/SCN-ONE/CASE-X");
     expect(first).toContain("0 / 1 (0%)");
+  });
+
+  it("renders colliding NUL-containing Case × layer pairs independently", () => {
+    const collisionManifest: MouraManifest = {
+      version: 1,
+      sources: { requirements: ["req.md"], specifications: ["spec.md"] },
+      verificationLayers: ["y\0<z>", "<z>"],
+      requirements: [
+        {
+          kind: "requirement",
+          localId: "r",
+          scenarios: [
+            {
+              kind: "scenario",
+              localId: "s",
+              cases: [
+                { kind: "case", localId: "x", verify: ["y\0<z>"] },
+                { kind: "case", localId: "x\0y", verify: ["<z>"] },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const checked = checkVerification(collisionManifest, [
+      { covers: ["r/s/x"], layer: "y\0<z>", status: "passed" },
+      { covers: ["r/s/x\0y"], layer: "<z>", status: "failed" },
+    ]);
+
+    const html = renderCoverageReport(collisionManifest, checked);
+
+    expect(html).toContain(
+      '<h4>r/s/x</h4><ul><li><code>y\0&lt;z&gt;</code> <span class="status pass">PASS</span>',
+    );
+    expect(html).toContain(
+      '<h4>r/s/x\0y</h4><ul><li><code>&lt;z&gt;</code> <span class="status fail">FAIL</span>',
+    );
+    expect(html).not.toContain("<code>y\0<z></code>");
   });
 
   it("rejects an invalid project without writing a report", async () => {
