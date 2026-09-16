@@ -171,7 +171,7 @@ export function renderCoverageReport(
   const layers = summary.layers
     .map(
       (layer) =>
-        `<tr><th>${escapeHtml(layer.layer)}</th><td>${count(layer)}</td></tr>`,
+        `<tr><th>${renderText(layer.layer)}</th><td>${count(layer)}</td></tr>`,
     )
     .join("");
   const hierarchy = manifest.requirements
@@ -188,16 +188,16 @@ export function renderCoverageReport(
                     throw new Error(
                       `Check result omitted required pair ${caseId} × ${layer}`,
                     );
-                  return `<li><code>${escapeHtml(layer)}</code> <span class="status ${status.toLowerCase()}">${status}</span></li>`;
+                  return `<li><code>${renderText(layer)}</code> <span class="status ${status.toLowerCase()}">${status}</span></li>`;
                 })
                 .join("");
-              return `<section class="case"><h4>${escapeHtml(caseId)}</h4><ul>${statuses}</ul></section>`;
+              return `<section class="case"><h4>${renderText(caseId)}</h4><ul>${statuses}</ul></section>`;
             })
             .join("");
-          return `<section><h3>${escapeHtml(canonicalId([requirement, scenario]))}</h3>${cases}</section>`;
+          return `<section><h3>${renderText(canonicalId([requirement, scenario]))}</h3>${cases}</section>`;
         })
         .join("");
-      return `<article><h2>${escapeHtml(canonicalId([requirement]))}</h2>${scenarios}</article>`;
+      return `<article><h2>${renderText(canonicalId([requirement]))}</h2>${scenarios}</article>`;
     })
     .join("");
   const issues = [
@@ -207,7 +207,7 @@ export function renderCoverageReport(
   const issueHtml =
     issues.length === 0
       ? "<p>None.</p>"
-      : `<ul>${issues.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>`;
+      : `<ul>${issues.map((issue) => `<li>${renderText(issue)}</li>`).join("")}</ul>`;
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Moura Requirement Coverage</title>
 <style>body{font:16px system-ui,sans-serif;line-height:1.5;max-width:72rem;margin:auto;padding:2rem;color:#172033}h1,h2,h3,h4{line-height:1.2}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:1rem}.metric,.case{border:1px solid #ccd3df;border-radius:.5rem;padding:1rem}.metric span{display:block;font-size:1.4rem}.status{font-weight:700}.pass{color:#167044}.fail,.broken{color:#b42318}.skipped,.missing{color:#854d0e}table{border-collapse:collapse}th,td{border:1px solid #ccd3df;padding:.5rem;text-align:left}code{font-size:.9em}</style></head>
@@ -228,6 +228,16 @@ function title(value: string): string {
   return value === "pairs"
     ? "Required Case × layer pairs"
     : value[0]!.toUpperCase() + value.slice(1);
+}
+function renderText(value: string): string {
+  return escapeHtml(escapeForDisplay(value));
+}
+function escapeForDisplay(value: string): string {
+  return value.replace(/[\\\p{Cc}]/gu, (character) =>
+    character === "\\"
+      ? "\\\\"
+      : `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
 }
 function escapeHtml(value: string): string {
   return value
