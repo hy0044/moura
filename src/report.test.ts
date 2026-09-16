@@ -159,6 +159,34 @@ requirements:
     expect(html).not.toContain("undefined");
   });
 
+  it("rejects unsafe evidence identities without placing controls in HTML", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "moura-report-test-"));
+    directories.push(directory);
+    await writeProject(directory);
+    await writeFile(
+      join(directory, "allure-results", "unsafe-result.json"),
+      JSON.stringify({
+        status: "passed",
+        labels: [
+          { name: "moura_case", value: "R/S/C\u0000ignored" },
+          { name: "moura_layer", value: "unit" },
+        ],
+      }),
+    );
+
+    const result = await reportProjectDirectory(directory);
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toContain(
+      "invalid-moura-case-label: unsafe-result.json: moura_case contains characters or structure not allowed in a canonical Moura Case ID",
+    );
+    const html = await readFile(result.outputPath!, "utf8");
+    expect(html).toContain("invalid-moura-case-label");
+    expect(html).toContain("unsafe-result.json");
+    expect(html).toContain("MISSING");
+    expect(html).not.toContain("\u0000");
+    expect(html).not.toContain("ignored");
+  });
+
   it("rejects a symlinked report directory without writing outside the project", async () => {
     const parent = await mkdtemp(join(tmpdir(), "moura-report-test-"));
     directories.push(parent);

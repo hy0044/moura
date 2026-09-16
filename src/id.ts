@@ -57,6 +57,19 @@ export function interoperableStringError(value: string): string | undefined {
   return undefined;
 }
 
+/** Validate an external canonical Case ID without constructing domain nodes. */
+export function canonicalCaseIdError(value: string): string | undefined {
+  const segments = value.split(SEPARATOR);
+  if (segments.length !== 3)
+    return "must contain exactly three local IDs separated by '/'";
+  try {
+    for (const segment of segments) localId(segment);
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  return undefined;
+}
+
 /** The single construction point for logical canonical IDs. */
 export function canonicalId(nodes: readonly TraceNode[]): CanonicalId {
   if (nodes.length === 0) {
