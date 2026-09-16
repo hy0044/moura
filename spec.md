@@ -34,8 +34,11 @@ Validation fails when a Case local ID occurs more than once under the same Scena
 
 #### CASE-008 Reject an invalid local ID
 
-Validation fails when a local ID is empty or contains `/` or whitespace,
-including spaces and tabs.
+Validation fails when a local ID is empty; contains `/` or a Unicode
+`White_Space` character; contains a Unicode control code point whose
+`General_Category` is `Cc`; or contains an unpaired UTF-16 surrogate code unit.
+Ordinary printable and supplementary Unicode code points remain valid and are
+not normalized.
 
 #### CASE-009 Reject an incomplete hierarchy
 
@@ -48,6 +51,8 @@ Validation fails when a Case has no `verify` entry or its `verify` list is empty
 #### CASE-011 Reject an unknown or duplicate verification layer
 
 Validation fails when a Case references a layer absent from `verification.layers`, or repeats a layer in its `verify` list.
+Layer names are also invalid when they contain a Unicode `Cc` control code point
+or an unpaired UTF-16 surrogate; valid surrogate pairs remain supported.
 
 #### CASE-012 Reject a duplicate canonical ID
 

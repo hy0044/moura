@@ -56,7 +56,7 @@ Requirement
       └ Case
 ```
 
-A **local ID** identifies a node among its siblings. The v0.1 convention is `REQ-001`, `SCN-001`, and `CASE-001`, but the model does not embed those prefixes or a three-digit rule. Local IDs must be non-empty and cannot contain `/` or whitespace.
+A **local ID** identifies a node among its siblings. The v0.1 convention is `REQ-001`, `SCN-001`, and `CASE-001`, but the model does not embed those prefixes or a three-digit rule. Local IDs must be non-empty and cannot contain `/`, Unicode whitespace, Unicode control code points (`General_Category=Cc`), or unpaired UTF-16 surrogates. Verification-layer names share the latter two interoperability restrictions; ordinary printable and supplementary Unicode remain supported.
 
 Moura derives a logical **canonical ID** from the hierarchy:
 
@@ -145,7 +145,9 @@ Evidence-producing tests use the Moura-owned custom Allure labels
 `moura_case` and `moura_layer`. They are not built-in Allure identity or suite
 semantics: repeated `moura_case` labels will map to future
 `Evidence.covers[]`, while the exactly one `moura_layer` label will map to future
-`Evidence.layer`. Case IDs and layer values must come from `moura.yaml`.
+`Evidence.layer`. Case IDs and layer values must come from `moura.yaml` and obey
+the same identifier/layer character contract. Invalid identity labels are
+reported as evidence-input errors and do not produce normalized evidence.
 
 The executable exposes `validate`, `check`, `report`, version, and help commands. Domain types, coverage aggregation, report rendering, and canonical-ID construction are also exported for integrations.
 

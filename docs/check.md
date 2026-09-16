@@ -67,7 +67,9 @@ Custom labels and statuses map as follows:
 | `skipped`                       | `skipped`              |
 | `unknown`                       | invalid adapter input  |
 
-Repeated identical `moura_case` values are de-duplicated while preserving their first-seen order. The caller-supplied source, or the result filename when loading a directory, is retained as adapter-neutral `Evidence.source` and does not affect aggregation. Canonical-ID and project-layer validity remain the responsibility of `checkVerification()` rather than the Allure-format adapter.
+Every `moura_case` value must be a canonical Case ID with exactly three `/`-separated valid local IDs. Every `moura_layer` value must satisfy the verification-layer string-safety contract: it contains neither a Unicode `General_Category=Cc` control code point nor an unpaired UTF-16 surrogate. Invalid identity labels are adapter-input errors; the result produces no normalized evidence, and diagnostics identify the field and result source without reproducing the unsafe value.
+
+Repeated identical valid `moura_case` values are de-duplicated while preserving their first-seen order. The caller-supplied source, or the result filename when loading a directory, is retained as adapter-neutral `Evidence.source` and does not affect aggregation. Whether a well-formed canonical Case ID or layer is declared by the validated project remains the responsibility of `checkVerification()` rather than the Allure-format adapter.
 
 ## Requirement Coverage report
 
