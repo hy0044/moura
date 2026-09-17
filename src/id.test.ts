@@ -47,9 +47,23 @@ describe("canonicalId", () => {
       "login-flow",
       "login_flow",
       "REQ-\uFEFF001",
+      "要件-一",
+      "CASE-😀",
     ]) {
       expect(localId(value)).toBe(value);
     }
+  });
+
+  it("rejects Unicode controls and unpaired UTF-16 surrogates", () => {
+    for (const value of [
+      "ID\u0000",
+      "ID\u0001",
+      "ID\u007f",
+      "ID\u009f",
+      "ID\ud800",
+      "ID\udfff",
+    ])
+      expect(() => localId(value)).toThrow(InvalidLocalIdError);
   });
 
   it("rejects an invalid hierarchy", () => {

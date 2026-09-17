@@ -85,6 +85,63 @@ describe("Allure evidence conversion", () => {
   });
 
   it.each([
+    ["NUL", "REQ-001/SCN-001/CASE\u0000-001"],
+    ["C0 control", "REQ-001/SCN-001/CASE\u0001-001"],
+    ["DEL", "REQ-001/SCN-001/CASE\u007f-001"],
+    ["lone surrogate", "REQ-001/SCN-001/CASE\ud800-001"],
+    ["malformed canonical ID", "REQ-001/CASE-001"],
+  ])("rejects a moura_case containing %s", (_name, value) => {
+    const converted = convertAllureResult(
+      result("passed", [{ name: "moura_case", value }, layerLabel]),
+      "unsafe-result.json",
+    );
+    expect(converted.evidence).toEqual([]);
+    expect(converted.issues).toContainEqual({
+      code: "invalid-moura-case-label",
+      message:
+        "moura_case contains characters or structure not allowed in a canonical Moura Case ID",
+      source: "unsafe-result.json",
+    });
+  });
+
+  it.each([
+    ["NUL", "unit\u0000bad"],
+    ["C0 control", "unit\u0001bad"],
+    ["DEL", "unit\u007fbad"],
+    ["C1 control", "unit\u009fbad"],
+    ["lone surrogate", "unit\udfffbad"],
+  ])("rejects a moura_layer containing %s", (_name, value) => {
+    const converted = convertAllureResult(
+      result("passed", [caseLabel, { name: "moura_layer", value }]),
+      "unsafe-result.json",
+    );
+    expect(converted.evidence).toEqual([]);
+    expect(converted.issues).toContainEqual({
+      code: "invalid-moura-layer-label",
+      message:
+        "moura_layer contains characters not allowed in a Moura verification-layer name",
+      source: "unsafe-result.json",
+    });
+  });
+
+  it("accepts canonical separators and printable Unicode identities", () => {
+    expect(
+      convertAllureResult(
+        result("passed", [
+          { name: "moura_case", value: "要件-一/場面-😀/事例-𠮷" },
+          { name: "moura_layer", value: "層-🚀" },
+        ]),
+      ).evidence,
+    ).toEqual([
+      {
+        covers: ["要件-一/場面-😀/事例-𠮷"],
+        layer: "層-🚀",
+        status: "passed",
+      },
+    ]);
+  });
+
+  it.each([
     ["missing Case", [layerLabel], "missing-moura-case"],
     ["missing layer", [caseLabel], "missing-moura-layer"],
     [

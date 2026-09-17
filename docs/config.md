@@ -32,8 +32,12 @@ The schema is closed for v0.1: implementations must reject unknown fields in the
 
 YAML anchors and aliases are not supported in v0.1. A manifest containing an anchor or alias is invalid. Support may be considered in a future manifest version.
 
-A local ID must be a non-empty string containing neither `/` nor whitespace.
-Whitespace includes spaces, tabs, and other whitespace characters. Prefixes and
+A local ID must be a non-empty string containing neither `/` nor Unicode
+`White_Space`. Local IDs and verification-layer names must also contain neither
+a Unicode control code point (`General_Category=Cc`, including NUL and DEL) nor
+an unpaired UTF-16 surrogate code unit. Valid surrogate pairs, ordinary
+printable Unicode, and supplementary Unicode code points are accepted without
+normalization. Prefixes and
 fixed digit counts are not enforced: `REQ-001`, `login-flow`, and `login_flow`
 are valid examples, while `REQ 001` and `SCN- 001` are invalid. Canonical IDs
 continue to join local IDs with `/`.
@@ -69,10 +73,12 @@ The `moura validate` command must return failure, without warnings, when it find
 - a manifest Requirement absent from requirement sources;
 - a manifest Scenario or Case absent under its expected Markdown ancestors;
 - a duplicate Requirement ID in the project, Scenario ID within its Requirement, or Case ID within its Scenario;
-- an empty local ID or one containing `/` or whitespace;
+- an empty local ID or one containing `/`, Unicode whitespace, a Unicode `Cc`
+  control code point, or an unpaired UTF-16 surrogate;
 - a broken or missing Requirement → Scenario → Case relationship;
 - a Requirement without a Scenario, a Scenario without a Case, or a Case without a non-empty `verify` list;
-- an undeclared verification layer or a repeated layer within one Case;
+- an unsafe verification-layer name, an undeclared verification layer, or a
+  repeated layer within one Case;
 - a duplicate derived canonical ID; or
 - a reserved Moura-managed Markdown ID absent from the manifest.
 

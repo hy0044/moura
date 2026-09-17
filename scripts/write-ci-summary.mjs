@@ -37,6 +37,7 @@ const lines = [
   "",
   "### Reports",
   "",
+  "- Requirement Coverage: uploaded as the `moura-report` workflow artifact",
   "- Coverage HTML: uploaded as the `coverage-report` workflow artifact",
   "- Allure Report: uploaded as the `allure-report` workflow artifact",
 ];
@@ -49,7 +50,8 @@ if (
     "",
     "### Latest main quality reports",
     "",
-    "- [Coverage report](https://hy0044.github.io/moura/coverage/)",
+    "- [Requirement Coverage](https://hy0044.github.io/moura/moura/)",
+    "- [Code coverage](https://hy0044.github.io/moura/coverage/)",
     "- [Allure report](https://hy0044.github.io/moura/allure/)",
   );
 } else {

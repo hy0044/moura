@@ -5,6 +5,7 @@ allure-results/
 !test/fixtures/passing-project/allure-results/
 !test/fixtures/passing-project/allure-results/*.json
 allure-report/
+moura-report/
 _site/
 *.tsbuildinfo
 .DS_Store

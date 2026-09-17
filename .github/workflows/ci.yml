@@ -31,6 +31,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        id: install
         run: pnpm install --frozen-lockfile
 
       - name: Lint
@@ -46,35 +47,67 @@ jobs:
         run: pnpm test:coverage
 
       - name: Generate and verify Allure results
+        if: always() && steps.install.outcome == 'success'
         run: pnpm test:allure
 
       - name: Generate Allure HTML report
+        if: always() && hashFiles('allure-results/*-result.json') != ''
         run: pnpm report:allure
 
+      - name: Build
+        id: build
+        if: always() && steps.install.outcome == 'success'
+        run: pnpm build
+
+      - name: Validate Moura repository
+        if: always() && steps.build.outcome == 'success'
+        run: node dist/cli.js validate .
+
+      - name: Generate Moura Requirement Coverage report
+        if: always() && steps.build.outcome == 'success'
+        run: pnpm report:moura
+
+      - name: Verify Moura Requirement Coverage report identity
+        if: always() && hashFiles('moura-report/index.html') != ''
+        run: |
+          test -f moura-report/index.html
+          grep -F 'REQ-001/SCN-001/CASE-001' moura-report/index.html
+
       - name: Upload coverage report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
           retention-days: 14
+          if-no-files-found: warn
 
       - name: Upload Allure report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: allure-report/
           retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload Moura Requirement Coverage report
+        if: always() && hashFiles('moura-report/index.html') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: moura-report
+          path: moura-report/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Moura self-check
+        if: always() && steps.build.outcome == 'success'
+        run: node dist/cli.js check .
 
       - name: Write quality job summary
         run: pnpm quality:summary
 
-      - name: Build
-        run: pnpm build
-
-      - name: Validate Moura traceability
-        run: node dist/cli.js validate
-
-      - name: Check passing Moura project
+      - name: Fixture check smoke
         run: node dist/cli.js check test/fixtures/passing-project
 
       - name: Check package contents

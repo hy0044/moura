@@ -85,11 +85,15 @@ describe("REQ-002 verification check contract", () => {
     const cases =
       testCase.name === "an empty set of"
         ? ["REQ-002/SCN-001/CASE-002"]
-        : testCase.name === "broken"
-          ? ["REQ-002/SCN-001/CASE-008"]
-          : testCase.name === "passed and skipped"
-            ? ["REQ-002/SCN-001/CASE-001", "REQ-002/SCN-001/CASE-005"]
-            : [];
+        : testCase.name === "failed"
+          ? ["REQ-002/SCN-001/CASE-003"]
+          : testCase.name === "skipped"
+            ? ["REQ-002/SCN-001/CASE-004"]
+            : testCase.name === "broken"
+              ? ["REQ-002/SCN-001/CASE-008"]
+              : testCase.name === "passed and skipped"
+                ? ["REQ-002/SCN-001/CASE-001", "REQ-002/SCN-001/CASE-005"]
+                : [];
 
     it(mouraEvidenceName(name, cases, "unit"), () => {
       const result = checkVerification(manifest(), evidence(testCase.statuses));
@@ -166,23 +170,37 @@ requirements:
     ]);
   });
 
-  it("reports unknown canonical IDs instead of silently ignoring them", () => {
-    const result = checkVerification(
-      manifest(),
-      evidence(["passed"], "unit", ["unknown/scenario/case"]),
-    );
-    expect(result.evidenceIssues[0]?.code).toBe("unknown-evidence-id");
-    expect(result.passed).toBe(false);
-  });
+  it(
+    mouraEvidenceName(
+      "reports unknown canonical IDs instead of silently ignoring them",
+      ["REQ-002/SCN-001/CASE-006"],
+      "unit",
+    ),
+    () => {
+      const result = checkVerification(
+        manifest(),
+        evidence(["passed"], "unit", ["unknown/scenario/case"]),
+      );
+      expect(result.evidenceIssues[0]?.code).toBe("unknown-evidence-id");
+      expect(result.passed).toBe(false);
+    },
+  );
 
-  it("reports evidence for undeclared verification layers", () => {
-    const result = checkVerification(
-      manifest(),
-      evidence(["passed"], "system"),
-    );
-    expect(result.evidenceIssues[0]?.code).toBe("unknown-evidence-layer");
-    expect(result.passed).toBe(false);
-  });
+  it(
+    mouraEvidenceName(
+      "reports evidence for undeclared verification layers",
+      ["REQ-002/SCN-001/CASE-007"],
+      "unit",
+    ),
+    () => {
+      const result = checkVerification(
+        manifest(),
+        evidence(["passed"], "system"),
+      );
+      expect(result.evidenceIssues[0]?.code).toBe("unknown-evidence-layer");
+      expect(result.passed).toBe(false);
+    },
+  );
 
   it("reports evidence for a layer that the covered Case does not require", () => {
     const result = checkVerification(
@@ -200,7 +218,7 @@ requirements:
         requirements: ["req.md"],
         specifications: ["spec.md"],
       },
-      verificationLayers: ["y\0z", "z", "other"],
+      verificationLayers: ["y|z", "z", "other"],
       requirements: [
         {
           kind: "requirement",
@@ -210,8 +228,8 @@ requirements:
               kind: "scenario",
               localId: "s",
               cases: [
-                { kind: "case", localId: "x", verify: ["y\0z"] },
-                { kind: "case", localId: "x\0y", verify: ["other"] },
+                { kind: "case", localId: "x", verify: ["y|z"] },
+                { kind: "case", localId: "x|y", verify: ["other"] },
               ],
             },
           ],
@@ -220,7 +238,7 @@ requirements:
     };
 
     const result = checkVerification(collisionManifest, [
-      { covers: ["r/s/x\0y"], layer: "z", status: "passed" },
+      { covers: ["r/s/x|y"], layer: "z", status: "passed" },
     ]);
 
     expect(
@@ -231,23 +249,37 @@ requirements:
     expect(result.passed).toBe(false);
   });
 
-  it("limits v0.1 evidence targets to canonical Case IDs", () => {
-    const result = checkVerification(
-      manifest(),
-      evidence(["passed"], "unit", ["requirement/scenario"]),
-    );
-    expect(result.evidenceIssues[0]?.code).toBe("non-case-evidence-target");
-    expect(result.passed).toBe(false);
-  });
+  it(
+    mouraEvidenceName(
+      "limits v0.1 evidence targets to canonical Case IDs",
+      ["REQ-002/SCN-001/CASE-006"],
+      "unit",
+    ),
+    () => {
+      const result = checkVerification(
+        manifest(),
+        evidence(["passed"], "unit", ["requirement/scenario"]),
+      );
+      expect(result.evidenceIssues[0]?.code).toBe("non-case-evidence-target");
+      expect(result.passed).toBe(false);
+    },
+  );
 
-  it("reports evidence with no coverage targets", () => {
-    const result = checkVerification(
-      manifest(),
-      evidence(["passed"], "unit", []),
-    );
-    expect(result.evidenceIssues[0]?.code).toBe("empty-evidence-coverage");
-    expect(result.passed).toBe(false);
-  });
+  it(
+    mouraEvidenceName(
+      "reports evidence with no coverage targets",
+      ["REQ-002/SCN-001/CASE-006"],
+      "unit",
+    ),
+    () => {
+      const result = checkVerification(
+        manifest(),
+        evidence(["passed"], "unit", []),
+      );
+      expect(result.evidenceIssues[0]?.code).toBe("empty-evidence-coverage");
+      expect(result.passed).toBe(false);
+    },
+  );
 
   it("reports evidence issues independently of evidence ordering", () => {
     const unknownId = evidence(["passed"], "unit", ["unknown"])[0]!;

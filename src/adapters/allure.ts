@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Evidence } from "../model.js";
+import { canonicalCaseIdError, interoperableStringError } from "../id.js";
 
 /** The small, Moura-owned subset of an Allure result used during conversion. */
 export interface AllureEvidenceResult {
@@ -17,6 +18,8 @@ export interface AllureEvidenceLabel {
 export type EvidenceAdapterIssueCode =
   | "invalid-result"
   | "invalid-label"
+  | "invalid-moura-case-label"
+  | "invalid-moura-layer-label"
   | "missing-moura-case"
   | "missing-moura-layer"
   | "multiple-moura-layers"
@@ -78,8 +81,25 @@ export function convertAllureResult(
           source,
         ),
       );
-    } else if (label.name === "moura_case") caseValues.push(label.value);
-    else layerValues.push(label.value);
+    } else if (label.name === "moura_case") {
+      if (canonicalCaseIdError(label.value))
+        issues.push(
+          issue(
+            "invalid-moura-case-label",
+            "moura_case contains characters or structure not allowed in a canonical Moura Case ID",
+            source,
+          ),
+        );
+      else caseValues.push(label.value);
+    } else if (interoperableStringError(label.value)) {
+      issues.push(
+        issue(
+          "invalid-moura-layer-label",
+          "moura_layer contains characters not allowed in a Moura verification-layer name",
+          source,
+        ),
+      );
+    } else layerValues.push(label.value);
   }
 
   if (caseValues.length === 0)
