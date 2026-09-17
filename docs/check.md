@@ -76,6 +76,7 @@ Repeated identical valid `moura_case` values are de-duplicated while preserving 
 After evidence exists, `moura report [directory]` writes `<project>/moura-report/index.html`. The static report consumes the same validated manifest, normalized evidence, and `checkVerification()` result as `moura check`; it does not parse Allure or reproduce pair-status precedence.
 
 `moura-report/` is generated output owned and managed by Moura. Running `moura report` may delete and recreate the entire directory, so do not place files there that you want to preserve.
+Moura assumes no concurrently malicious process mutates the validated project directory while report output is being recreated; defending against such races is outside its filesystem threat model.
 
 A required Case × layer pair is covered only when it is `PASS`. A Case is fully verified only when every required layer is `PASS`; a Scenario only when every Case is fully verified; and a Requirement only when every Scenario is fully verified. Project and per-layer counts use the same rule. `FAIL`, `BROKEN`, `SKIPPED`, and `MISSING` are displayed as gaps.
 
