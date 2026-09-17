@@ -64,6 +64,9 @@ describe("requirement coverage report", () => {
     const checked = checkVerification(manifest, evidence);
     const first = renderCoverageReport(manifest, checked);
     expect(renderCoverageReport(manifest, checked)).toBe(first);
+    expect(first).toContain(
+      '<meta name="format-detection" content="telephone=no">',
+    );
     for (const status of ["PASS", "FAIL", "BROKEN", "SKIPPED", "MISSING"])
       expect(first).toContain(status);
     expect(first).toContain("Per-layer coverage");

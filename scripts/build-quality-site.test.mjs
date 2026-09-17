@@ -16,7 +16,11 @@ describe("quality site assembly", () => {
       const run = spawnSync(
         process.execPath,
         [resolve("scripts/build-quality-site.mjs")],
-        { cwd: directory, encoding: "utf8" },
+        {
+          cwd: directory,
+          encoding: "utf8",
+          env: { ...process.env, GITHUB_SHA: "0123456789abcdef" },
+        },
       );
       expect(run.status, run.stderr).toBe(0);
       const landing = await readFile(
@@ -29,6 +33,13 @@ describe("quality site assembly", () => {
       expect(landing.indexOf("Allure Report")).toBeLessThan(
         landing.indexOf("Code Coverage"),
       );
+      expect(landing).toContain('href="./moura/"');
+      expect(landing).toContain('href="./allure/"');
+      expect(landing).toContain('href="./coverage/"');
+      expect(landing).toContain(
+        'href="https://github.com/hy0044/moura">hy0044/moura</a>',
+      );
+      expect(landing).toContain("Commit: <code>0123456</code>");
       for (const report of ["moura", "allure", "coverage"])
         await expect(
           readFile(join(directory, "_site", report, "index.html"), "utf8"),
