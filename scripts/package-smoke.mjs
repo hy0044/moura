@@ -32,6 +32,21 @@ try {
   const packageJson = JSON.parse(
     await readFile(join(root, "package.json"), "utf8"),
   );
+  const installedPackageJson = JSON.parse(
+    await readFile(
+      join(
+        packageDirectory,
+        "node_modules",
+        ...packageJson.name.split("/"),
+        "package.json",
+      ),
+      "utf8",
+    ),
+  );
+  if (installedPackageJson.name !== "@specxai/moura")
+    throw new Error(`Unexpected package name: ${installedPackageJson.name}`);
+  if (installedPackageJson.bin?.moura !== "./dist/cli.js")
+    throw new Error("Installed package does not expose the moura CLI");
   const version = run(binary, ["--version"], packageDirectory);
   if (version.trim() !== `moura ${packageJson.version}`)
     throw new Error(`Unexpected version: ${version}`);
