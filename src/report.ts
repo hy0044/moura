@@ -1,6 +1,5 @@
-import { constants } from "node:fs";
-import { lstat, mkdir, open, realpath } from "node:fs/promises";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { mkdir, realpath, rm, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 import type { EvidenceAdapterIssue } from "./adapters/allure.js";
 import type {
@@ -76,65 +75,11 @@ async function writeReportFile(
 ): Promise<string> {
   const projectRoot = await realpath(resolve(directory));
   const outputDirectory = resolve(projectRoot, "moura-report");
-  let outputDirectoryStatus = await optionalLstat(outputDirectory);
-  if (outputDirectoryStatus?.isSymbolicLink())
-    throw new Error("moura-report must not be a symbolic link");
-  if (outputDirectoryStatus && !outputDirectoryStatus.isDirectory())
-    throw new Error("moura-report must be a directory");
-  if (!outputDirectoryStatus) {
-    await mkdir(outputDirectory);
-    outputDirectoryStatus = await lstat(outputDirectory);
-    if (outputDirectoryStatus.isSymbolicLink())
-      throw new Error("moura-report must not be a symbolic link");
-  }
-
-  const realOutputDirectory = await realpath(outputDirectory);
-  if (!isWithin(projectRoot, realOutputDirectory))
-    throw new Error("moura-report must remain inside the project directory");
-
-  const outputPath = resolve(realOutputDirectory, "index.html");
-  const outputStatus = await optionalLstat(outputPath);
-  if (outputStatus?.isSymbolicLink())
-    throw new Error("moura-report/index.html must not be a symbolic link");
-  if (outputStatus?.isDirectory())
-    throw new Error("moura-report/index.html must be a file");
-
-  const handle = await open(
-    outputPath,
-    constants.O_WRONLY |
-      constants.O_CREAT |
-      constants.O_TRUNC |
-      constants.O_NOFOLLOW,
-    0o666,
-  );
-  try {
-    await handle.writeFile(contents, "utf8");
-  } finally {
-    await handle.close();
-  }
+  await rm(outputDirectory, { recursive: true, force: true });
+  await mkdir(outputDirectory);
+  const outputPath = resolve(outputDirectory, "index.html");
+  await writeFile(outputPath, contents, "utf8");
   return outputPath;
-}
-
-async function optionalLstat(path: string) {
-  try {
-    return await lstat(path);
-  } catch (error) {
-    if (isNodeError(error) && error.code === "ENOENT") return undefined;
-    throw error;
-  }
-}
-
-function isWithin(projectRoot: string, targetPath: string): boolean {
-  const relativePath = relative(projectRoot, targetPath);
-  return (
-    relativePath !== ".." &&
-    !relativePath.startsWith(`..${sep}`) &&
-    !isAbsolute(relativePath)
-  );
-}
-
-function isNodeError(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && "code" in error;
 }
 
 function errorMessage(error: unknown): string {
