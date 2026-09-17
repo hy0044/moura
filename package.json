@@ -1,5 +1,5 @@
 {
-  "name": "moura",
+  "name": "@specxai/moura",
   "version": "0.1.0",
   "description": "Git-native traceability and verification coverage CLI",
   "keywords": [
@@ -19,6 +19,9 @@
   },
   "homepage": "https://github.com/hy0044/moura#readme",
   "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "packageManager": "pnpm@10.28.1",
   "type": "module",
   "bin": {

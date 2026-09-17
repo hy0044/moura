@@ -32,8 +32,10 @@ authorization.
    not be shipped.
 5. Tag the reviewed commit with `v0.1.0` and push the tag.
 6. Create a GitHub Release from that tag.
-7. Run `pnpm publish` only after package ownership, registry authentication, and
-   publication have been explicitly authorized by a maintainer.
+7. Run `pnpm publish` to publish `@specxai/moura` only after package ownership,
+   registry authentication, and publication have been explicitly authorized by
+   a maintainer. The package's `publishConfig.access` makes the scoped package
+   public.
 
 The package smoke test creates a tarball, installs it in a temporary consumer
 project, invokes the installed `moura` binary for version/help/validate/check,

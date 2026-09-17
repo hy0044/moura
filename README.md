@@ -7,11 +7,12 @@ Moura is an open-source, Git-native CLI for checking traceability between requir
 ## First run
 
 A Moura project contains `moura.yaml` plus the requirement and specification
-Markdown files named by that manifest. Install the CLI from npm (or use
-`pnpm dlx moura` without a global install), then validate the project structure:
+Markdown files named by that manifest. Install the `@specxai/moura` package
+from npm (or use `pnpm dlx @specxai/moura` without a global install), then
+validate the project structure with the `moura` CLI:
 
 ```sh
-npm install --global moura
+npm install -g @specxai/moura
 cd my-project
 moura validate
 ```
@@ -104,6 +105,15 @@ requirements:
 Canonical IDs are intentionally omitted and derived from the nesting. Layer names are strings rather than a closed enum, allowing domains to use values such as `contract`, `security`, `manual`, `sil`, or `vehicle`. The repository's own [`moura.yaml`](moura.yaml), [`req.md`](req.md), and [`spec.md`](spec.md) are the primary real-world example; see the [v0.1 contract](docs/config.md).
 
 ## CLI
+
+The npm package is `@specxai/moura`, and its installed executable remains
+`moura`. From a project directory, the main commands are:
+
+```sh
+moura validate .
+moura check .
+moura report .
+```
 
 ```sh
 moura validate [directory] # validate moura.yaml and its configured Markdown sources
