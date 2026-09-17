@@ -29,5 +29,5 @@ writeFileSync(
 <a class="report" href="./moura/"><h2>Requirement Coverage</h2><p>Declared traceability and verification status</p><span class="open">Open →</span></a>
 <a class="report" href="./allure/"><h2>Allure Report</h2><p>Test execution details</p><span class="open">Open →</span></a>
 <a class="report" href="./coverage/"><h2>Code Coverage</h2><p>Source code coverage</p><span class="open">Open →</span></a>
-</div><footer class="meta"><p>Source: <a href="https://github.com/hy0044/moura">hy0044/moura</a></p><p>Commit: <code>${sha}</code></p></footer></main></body></html>\n`,
+</div><footer class="meta"><p>Source: <a href="https://github.com/specxai/moura">specxai/moura</a></p><p>Commit: <code>${sha}</code></p></footer></main></body></html>\n`,
 );

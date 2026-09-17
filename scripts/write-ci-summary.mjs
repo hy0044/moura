@@ -50,9 +50,9 @@ if (
     "",
     "### Latest main quality reports",
     "",
-    "- [Requirement Coverage](https://hy0044.github.io/moura/moura/)",
-    "- [Code coverage](https://hy0044.github.io/moura/coverage/)",
-    "- [Allure report](https://hy0044.github.io/moura/allure/)",
+    "- [Requirement Coverage](https://specxai.github.io/moura/moura/)",
+    "- [Code coverage](https://specxai.github.io/moura/coverage/)",
+    "- [Allure report](https://specxai.github.io/moura/allure/)",
   );
 } else {
   lines.push(

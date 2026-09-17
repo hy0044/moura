@@ -165,9 +165,9 @@ The executable exposes `validate`, `check`, `report`, version, and help commands
 
 Latest successful `main` branch reports:
 
-- [Requirement Coverage](https://hy0044.github.io/moura/moura/)
-- [Allure Report](https://hy0044.github.io/moura/allure/)
-- [Code coverage](https://hy0044.github.io/moura/coverage/)
+- [Requirement Coverage](https://specxai.github.io/moura/moura/)
+- [Allure Report](https://specxai.github.io/moura/allure/)
+- [Code coverage](https://specxai.github.io/moura/coverage/)
 
 Requirement Coverage rolls up authoritative pair results: only `PASS` is covered; every required layer must pass for a Case, every Case for a Scenario, and every Scenario for a Requirement. `FAIL`, `BROKEN`, `SKIPPED`, and `MISSING` remain visible gaps. **Moura verifies declared traceability and its evidence; it does not prove that a test semantically verifies the specification it declares.**
 

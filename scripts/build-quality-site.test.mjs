@@ -37,7 +37,7 @@ describe("quality site assembly", () => {
       expect(landing).toContain('href="./allure/"');
       expect(landing).toContain('href="./coverage/"');
       expect(landing).toContain(
-        'href="https://github.com/hy0044/moura">hy0044/moura</a>',
+        'href="https://github.com/specxai/moura">specxai/moura</a>',
       );
       expect(landing).toContain("Commit: <code>0123456</code>");
       for (const report of ["moura", "allure", "coverage"])
