@@ -45,7 +45,7 @@ try {
   );
   if (installedPackageJson.name !== "@specxai/moura")
     throw new Error(`Unexpected package name: ${installedPackageJson.name}`);
-  if (installedPackageJson.bin?.moura !== "./dist/cli.js")
+  if (installedPackageJson.bin?.moura !== "dist/cli.js")
     throw new Error("Installed package does not expose the moura CLI");
   const version = run(binary, ["--version"], packageDirectory);
   if (version.trim() !== `moura ${packageJson.version}`)
