@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { validateMouraEvidenceResults } from "./verify-allure-results.mjs";
+import {
+  type AllureLabel,
+  validateMouraEvidenceResults,
+} from "./verify-allure-results.js";
 
 const caseLayers = new Map([
   ["REQ-001/SCN-001/CASE-001", new Set(["unit", "integration"])],
@@ -9,7 +12,7 @@ const caseLayers = new Map([
 ]);
 const knownLayers = new Set(["unit", "integration"]);
 
-function result(...labels) {
+function result(...labels: AllureLabel[]) {
   return { name: "evidence result", labels };
 }
 

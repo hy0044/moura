@@ -3,14 +3,48 @@ import console from "node:console";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
-import { runCommand } from "./run-command.mjs";
+import { runCommand } from "./run-command.js";
 
 const root = resolve(import.meta.dirname, "..");
 const temporary = await mkdtemp(join(tmpdir(), "moura-package-smoke-"));
 const packageDirectory = join(temporary, "consumer");
 const fixture = join(temporary, "passing-project");
 
-function run(command, args, cwd = root) {
+interface PackageMetadata {
+  readonly name: string;
+  readonly version: string;
+  readonly bin?: Readonly<Record<string, string>>;
+}
+
+function parsePackageMetadata(text: string, source: string): PackageMetadata {
+  const value: unknown = JSON.parse(text);
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("name" in value) ||
+    typeof value.name !== "string" ||
+    !("version" in value) ||
+    typeof value.version !== "string"
+  )
+    throw new Error(`${source} has invalid package metadata`);
+  const bin = "bin" in value ? value.bin : undefined;
+  if (
+    bin !== undefined &&
+    (typeof bin !== "object" ||
+      bin === null ||
+      !Object.values(bin).every((entry) => typeof entry === "string"))
+  )
+    throw new Error(`${source} has invalid package binaries`);
+  return {
+    name: value.name,
+    version: value.version,
+    ...(bin === undefined
+      ? {}
+      : { bin: bin as Readonly<Record<string, string>> }),
+  };
+}
+
+function run(command: string, args: readonly string[], cwd = root): string {
   const result = runCommand(command, args, { cwd });
   return `${result.stdout}${result.stderr}`;
 }
@@ -29,19 +63,20 @@ try {
   run("npm", ["init", "-y"], packageDirectory);
   run("npm", ["install", tarball], packageDirectory);
   const binary = join(packageDirectory, "node_modules", ".bin", "moura");
-  const packageJson = JSON.parse(
-    await readFile(join(root, "package.json"), "utf8"),
+  const packageJsonPath = join(root, "package.json");
+  const packageJson = parsePackageMetadata(
+    await readFile(packageJsonPath, "utf8"),
+    packageJsonPath,
   );
-  const installedPackageJson = JSON.parse(
-    await readFile(
-      join(
-        packageDirectory,
-        "node_modules",
-        ...packageJson.name.split("/"),
-        "package.json",
-      ),
-      "utf8",
-    ),
+  const installedPackageJsonPath = join(
+    packageDirectory,
+    "node_modules",
+    ...packageJson.name.split("/"),
+    "package.json",
+  );
+  const installedPackageJson = parsePackageMetadata(
+    await readFile(installedPackageJsonPath, "utf8"),
+    installedPackageJsonPath,
   );
   if (installedPackageJson.name !== "@specxai/moura")
     throw new Error(`Unexpected package name: ${installedPackageJson.name}`);
