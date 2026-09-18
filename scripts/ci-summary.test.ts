@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { readAllureCounts } from "./ci-summary.mjs";
+import { readAllureCounts } from "./ci-summary.js";
 
 describe("CI summary Allure counts", () => {
   it("counts only Allure test result files by status", async () => {

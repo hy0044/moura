@@ -2,7 +2,7 @@ import process from "node:process";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { runCommand } from "./run-command.mjs";
+import { runCommand } from "./run-command.js";
 
 describe("runCommand", () => {
   it("returns captured stdout and stderr on success", () => {

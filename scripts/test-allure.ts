@@ -5,23 +5,39 @@ import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 
-import { parse } from "yaml";
+import { parseManifest } from "../src/manifest.js";
 
 import {
+  parseAllureResult,
   validateMouraEvidenceResults,
   verifyRepresentativeResult,
-} from "./verify-allure-results.mjs";
+} from "./verify-allure-results.js";
 
 const resultsDirectory = "allure-results";
 rmSync(resultsDirectory, { recursive: true, force: true });
 
 const require = createRequire(import.meta.url);
 const vitestPackagePath = require.resolve("vitest/package.json");
-const vitestPackage = JSON.parse(readFileSync(vitestPackagePath, "utf8"));
-const vitestBin =
-  typeof vitestPackage.bin === "string"
+const vitestPackage: unknown = JSON.parse(
+  readFileSync(vitestPackagePath, "utf8"),
+);
+const bin =
+  typeof vitestPackage === "object" &&
+  vitestPackage !== null &&
+  "bin" in vitestPackage
     ? vitestPackage.bin
-    : vitestPackage.bin.vitest;
+    : undefined;
+const vitestBin =
+  typeof bin === "string"
+    ? bin
+    : typeof bin === "object" &&
+        bin !== null &&
+        "vitest" in bin &&
+        typeof bin.vitest === "string"
+      ? bin.vitest
+      : undefined;
+if (!vitestBin)
+  throw new Error("vitest package metadata does not expose its CLI");
 const vitestCliPath = resolve(dirname(vitestPackagePath), vitestBin);
 const run = spawnSync(
   process.execPath,
@@ -31,23 +47,28 @@ const run = spawnSync(
 if (run.error) throw run.error;
 if (run.status !== 0) process.exit(run.status ?? 1);
 
-const manifest = parse(readFileSync("moura.yaml", "utf8"));
-const verificationLayersByCase = new Map();
+const parsedManifest = parseManifest(readFileSync("moura.yaml", "utf8"));
+if (!parsedManifest.value || parsedManifest.errors.length > 0)
+  throw new Error("Cannot load moura.yaml for Allure verification");
+const manifest = parsedManifest.value;
+const verificationLayersByCase = new Map<string, ReadonlySet<string>>();
 for (const requirement of manifest.requirements) {
   for (const scenario of requirement.scenarios) {
     for (const testCase of scenario.cases) {
-      const caseId = `${requirement.id}/${scenario.id}/${testCase.id}`;
+      const caseId = `${requirement.localId}/${scenario.localId}/${testCase.localId}`;
       verificationLayersByCase.set(caseId, new Set(testCase.verify));
     }
   }
 }
-const layers = new Set(manifest.verification.layers);
+const layers = new Set(manifest.verificationLayers);
 
 const results = readdirSync(resultsDirectory)
   .filter((file) => file.endsWith("-result.json"))
-  .map((file) =>
-    JSON.parse(readFileSync(`${resultsDirectory}/${file}`, "utf8")),
-  );
+  .map((file) => {
+    const path = `${resultsDirectory}/${file}`;
+    const value: unknown = JSON.parse(readFileSync(path, "utf8"));
+    return parseAllureResult(value, path);
+  });
 
 validateMouraEvidenceResults(results, verificationLayersByCase, layers);
 verifyRepresentativeResult(

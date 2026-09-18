@@ -1,16 +1,59 @@
 import { appendFile, readFile } from "node:fs/promises";
 import process from "node:process";
 
-import { readAllureCounts } from "./ci-summary.mjs";
+import { readAllureCounts } from "./ci-summary.js";
+
+interface CoverageMetric {
+  readonly pct: number;
+}
+
+interface CoverageSummary {
+  readonly statements: CoverageMetric;
+  readonly branches: CoverageMetric;
+  readonly functions: CoverageMetric;
+  readonly lines: CoverageMetric;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isCoverageMetric(value: unknown): value is CoverageMetric {
+  return isRecord(value) && typeof value.pct === "number";
+}
+
+function parseCoverageSummary(value: unknown): CoverageSummary {
+  if (!isRecord(value) || !("total" in value))
+    throw new Error("coverage summary does not contain total metrics");
+  const total = value.total;
+  const names = ["statements", "branches", "functions", "lines"] as const;
+  if (!isRecord(total) || !names.every((name) => isCoverageMetric(total[name])))
+    throw new Error("coverage summary has invalid total metrics");
+  const { statements, branches, functions, lines } = total;
+  if (
+    !isCoverageMetric(statements) ||
+    !isCoverageMetric(branches) ||
+    !isCoverageMetric(functions) ||
+    !isCoverageMetric(lines)
+  )
+    throw new Error("coverage summary has invalid total metrics");
+  return {
+    statements,
+    branches,
+    functions,
+    lines,
+  };
+}
 
 const summaryPath = process.env.GITHUB_STEP_SUMMARY;
 if (!summaryPath) {
   throw new Error("GITHUB_STEP_SUMMARY is not set");
 }
 
-const coverage = JSON.parse(
+const coverageValue: unknown = JSON.parse(
   await readFile("coverage/coverage-summary.json", "utf8"),
-).total;
+);
+const coverage = parseCoverageSummary(coverageValue);
 const allure = await readAllureCounts("allure-results");
 const metrics = [
   ["Statements", coverage.statements.pct],

@@ -15,7 +15,11 @@ describe("quality site assembly", () => {
       }
       const run = spawnSync(
         process.execPath,
-        [resolve("scripts/build-quality-site.mjs")],
+        [
+          "--import",
+          import.meta.resolve("tsx"),
+          resolve("scripts/build-quality-site.ts"),
+        ],
         {
           cwd: directory,
           encoding: "utf8",
