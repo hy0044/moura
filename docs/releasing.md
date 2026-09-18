@@ -5,12 +5,14 @@ because the checks below pass; npm publication requires explicit maintainer
 authorization.
 
 1. Confirm `main` and its public quality-report deployment are green.
-2. Check that `package.json` and `moura --version` both report the intended
-   release version.
+2. Update the version in both `package.json` and the `moura --version` output in
+   `src/cli.ts` to the intended release version.
 3. From a clean checkout on Node 24, run:
 
    ```sh
    pnpm install --frozen-lockfile
+   pnpm build
+   test "$(node dist/cli.js --version)" = "moura $(node -p "require('./package.json').version")"
    pnpm lint
    pnpm format:check
    pnpm typecheck
@@ -18,7 +20,6 @@ authorization.
    pnpm test:coverage
    pnpm test:allure
    pnpm report:allure
-   pnpm build
    node dist/cli.js validate .
    node dist/cli.js check .
    pnpm report:moura
@@ -31,8 +32,8 @@ authorization.
 4. Inspect the dry-run manifest. It should contain only `dist/`, `README.md`,
    `LICENSE`, and `package.json`; report output, fixtures, and test sources must
    not be shipped.
-5. Update `package.json` to the release version, merge it to `main`, and tag the
-   reviewed commit with the matching `vX.Y.Z` tag.
+5. Commit and merge the reviewed version changes, then tag that exact commit
+   with the matching `vX.Y.Z` tag.
 6. Create and publish a GitHub Release from that tag. The publishing workflow
    checks out the released tag, verifies it against `package.json`, repeats the
    package checks, and stages the npm publication.
