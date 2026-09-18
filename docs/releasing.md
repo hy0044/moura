@@ -5,7 +5,8 @@ because the checks below pass; npm publication requires explicit maintainer
 authorization.
 
 1. Confirm `main` and its public quality-report deployment are green.
-2. Check that `package.json` and `moura --version` both report `0.1.0`.
+2. Check that `package.json` and `moura --version` both report the intended
+   release version.
 3. From a clean checkout on Node 24, run:
 
    ```sh
@@ -30,12 +31,18 @@ authorization.
 4. Inspect the dry-run manifest. It should contain only `dist/`, `README.md`,
    `LICENSE`, and `package.json`; report output, fixtures, and test sources must
    not be shipped.
-5. Tag the reviewed commit with `v0.1.0` and push the tag.
-6. Create a GitHub Release from that tag.
-7. Run `pnpm publish` to publish `@specxai/moura` only after package ownership,
-   registry authentication, and publication have been explicitly authorized by
-   a maintainer. The package's `publishConfig.access` makes the scoped package
-   public.
+5. Update `package.json` to the release version, merge it to `main`, and tag the
+   reviewed commit with the matching `vX.Y.Z` tag.
+6. Create and publish a GitHub Release from that tag. The publishing workflow
+   checks out the released tag, verifies it against `package.json`, repeats the
+   package checks, and stages the npm publication.
+7. Review and approve the staged publication on npm. The package's
+   `publishConfig.access` makes the scoped package public.
+
+The npm package must have a stage-only Trusted Publisher configured for the
+`specxai/moura` repository and `.github/workflows/publish.yml`. This one-time
+npm setting supplies short-lived OIDC credentials; the workflow does not use an
+`NPM_TOKEN`.
 
 The package smoke test creates a tarball, installs it in a temporary consumer
 project, invokes the installed `moura` binary for version/help/validate/check,
