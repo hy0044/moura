@@ -46,11 +46,16 @@ Validation fails when a Requirement has no Scenario or a Scenario has no Case.
 
 #### CASE-010 Reject a Case without a verification layer
 
-Validation fails when a Case has no `verify` entry or its `verify` list is empty.
+Validation fails when a Case declares no verification layer: both `verify` and
+`unimplemented` are absent or empty. A Case is valid when at least one of the
+two lists contains a layer, including when `unimplemented` is the only
+non-empty list.
 
 #### CASE-011 Reject an unknown or duplicate verification layer
 
-Validation fails when a Case references a layer absent from `verification.layers`, or repeats a layer in its `verify` list.
+Validation fails when a Case references a layer absent from
+`verification.layers`; repeats a layer within either its `verify` or
+`unimplemented` list; or declares the same layer in both lists.
 Layer names are also invalid when they contain a Unicode `Cc` control code point
 or an unpaired UTF-16 surrogate; valid surrogate pairs remain supported.
 
