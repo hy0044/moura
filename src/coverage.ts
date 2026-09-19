@@ -79,5 +79,6 @@ export const coverageStatuses: readonly VerificationCheckStatus[] = [
   "FAIL",
   "BROKEN",
   "SKIPPED",
+  "UNIMPLEMENTED",
   "MISSING",
 ];

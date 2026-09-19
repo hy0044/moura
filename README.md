@@ -27,9 +27,8 @@ await allure.label("moura_case", "CASE-001");
 await allure.label("moura_layer", "unit");
 ```
 
-After the tests have written `allure-results/`, run `moura check`. Success means
-every required Case × layer pair is `PASS`, with no malformed or semantically
-invalid evidence. **`moura check` consumes existing evidence; it does not execute
+After the tests have written `allure-results/`, run `moura check`. Success means there are no error-severity pairs and no malformed or semantically
+invalid evidence. Explicit warning states remain visible but do not fail the check. **`moura check` consumes existing evidence; it does not execute
 the user's tests.** See [the check contract](docs/check.md) for details.
 
 ```sh
@@ -102,7 +101,12 @@ requirements:
             verify:
               - unit
               - integration
+          - id: CASE-002
+            unimplemented:
+              - integration
 ```
+
+`verify` requires Evidence; `unimplemented` explicitly records, in Git, that a Case × layer verification does not exist yet. Evidence absent from a `verify` pair is always `MISSING`—leaving it blank never implies `UNIMPLEMENTED`.
 
 Canonical IDs are intentionally omitted and derived from the nesting. Layer names are strings rather than a closed enum, allowing domains to use values such as `contract`, `security`, `manual`, `sil`, or `vehicle`. The repository's own [`moura.yaml`](moura.yaml), [`req.md`](req.md), and [`spec.md`](spec.md) are the primary real-world example; see the [v0.1 contract](docs/config.md).
 
@@ -123,7 +127,7 @@ moura check [directory]    # check existing Allure evidence
 moura report [directory]   # write <project>/moura-report/index.html
 ```
 
-All commands use the current working directory by default, or a supplied relative or absolute project directory. `moura check` first validates the project, then consumes existing evidence from `<project>/allure-results/`; it does not run tests or generate evidence. Every required Case × verification-layer point must be `PASS`, with no adapter or semantic evidence issues, for the check command to succeed. `moura report` consumes the same structured result and produces deterministic static HTML without running tests.
+All commands use the current working directory by default, or a supplied relative or absolute project directory. `moura check` first validates the project, then consumes existing evidence from `<project>/allure-results/`; it does not run tests or generate evidence. Every Case × verification-layer point must have success or warning severity, with no adapter or semantic evidence issues, for the check command to succeed. `PASS` is success; `SKIPPED` and `UNIMPLEMENTED` are warnings; `FAIL`, `BROKEN`, and `MISSING` are errors. `moura report` consumes the same structured result and produces deterministic static HTML without running tests.
 
 Allure results associate evidence using one or more ordered `moura_requirement`, `moura_scenario`, and `moura_case` local-ID triples and exactly one `moura_layer` label. Moura reconstructs canonical Case IDs at the adapter boundary. See the [Allure evidence adapter contract](docs/check.md#allure-evidence-adapter) for supported statuses and input details.
 
@@ -171,7 +175,7 @@ Latest successful `main` branch reports:
 - [Allure Report](https://specxai.github.io/moura/allure/)
 - [Code coverage](https://specxai.github.io/moura/coverage/)
 
-Requirement Coverage rolls up authoritative pair results: only `PASS` is covered; every required layer must pass for a Case, every Case for a Scenario, and every Scenario for a Requirement. `FAIL`, `BROKEN`, `SKIPPED`, and `MISSING` remain visible gaps. **Moura verifies declared traceability and its evidence; it does not prove that a test semantically verifies the specification it declares.**
+Requirement Coverage rolls up authoritative pair results: only `PASS` is covered; every required layer must pass for a Case, every Case for a Scenario, and every Scenario for a Requirement. `FAIL`, `BROKEN`, `SKIPPED`, `UNIMPLEMENTED`, and `MISSING` remain visible gaps; warnings and errors are visually distinct. **Moura verifies declared traceability and its evidence; it does not prove that a test semantically verifies the specification it declares.**
 
 These static reports are produced by CI; pull requests retain their reports as
 workflow artifacts without replacing the public site.

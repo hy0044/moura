@@ -124,7 +124,7 @@ requirements:
     ["passed", "PASS", 0],
     ["failed", "FAIL", 1],
     ["broken", "BROKEN", 1],
-    ["skipped", "SKIPPED", 1],
+    ["skipped", "SKIPPED", 0],
   ] as const)(
     "renders %s evidence as %s",
     async (status, rendered, exitCode) => {
@@ -133,7 +133,7 @@ requirements:
       const result = await checkProjectDirectory(directory);
       expect(result.exitCode).toBe(exitCode);
       expect(result.stdout).toContain(
-        `${rendered} REQ-001/SCN-001/CASE-001 [unit]`,
+        `${rendered} REQ-001/SCN-001/CASE-001 [unit] (${exitCode === 0 && rendered === "PASS" ? "success" : exitCode === 0 ? "warning" : "error"})`,
       );
     },
   );
@@ -146,6 +146,31 @@ requirements:
     expect(result.stdout[0]).toMatch(/^MISSING /u);
     expect(result.stderr).toEqual([]);
   });
+
+  it(
+    mouraEvidenceName(
+      "renders explicit UNIMPLEMENTED as a successful warning",
+      ["REQ-002/SCN-001/CASE-011"],
+      "integration",
+    ),
+    async () => {
+      const directory = await project();
+      await writeFile(
+        join(directory, "moura.yaml"),
+        (
+          await import("node:fs/promises").then(({ readFile }) =>
+            readFile(join(directory, "moura.yaml"), "utf8"),
+          )
+        ).replace("verify: [unit]", "unimplemented: [unit]"),
+      );
+      await mkdir(join(directory, "allure-results"));
+      const result = await checkProjectDirectory(directory);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(
+        "UNIMPLEMENTED REQ-001/SCN-001/CASE-001 [unit] (warning)",
+      );
+    },
+  );
 
   it("distinguishes a missing results directory from missing evidence", async () => {
     const result = await checkProjectDirectory(await project());

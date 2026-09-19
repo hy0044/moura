@@ -186,12 +186,35 @@ function testCase(
   source: string,
   errors: ValidationError[],
 ): CaseNode {
-  unknownFields(node, ["id", "verify"], path, source, errors);
+  unknownFields(node, ["id", "verify", "unimplemented"], path, source, errors);
   return {
     kind: "case",
     localId: stringValue(node, "id", `${path}.id`, source, errors),
-    verify: stringList(node, "verify", `${path}.verify`, source, errors),
+    verify: optionalStringList(
+      node,
+      "verify",
+      `${path}.verify`,
+      source,
+      errors,
+    ),
+    unimplemented: optionalStringList(
+      node,
+      "unimplemented",
+      `${path}.unimplemented`,
+      source,
+      errors,
+    ),
   };
+}
+
+function optionalStringList(
+  parent: Map,
+  key: string,
+  path: string,
+  source: string,
+  errors: ValidationError[],
+): string[] {
+  return parent.has(key) ? stringList(parent, key, path, source, errors) : [];
 }
 
 function map(

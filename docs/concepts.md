@@ -13,8 +13,8 @@ Moura verifies the current traceability graph and its verification coverage. Req
 Each node stores a semantic `kind` and a `localId` separately. Parent-child structure, rather than parsing an ID prefix, establishes context.
 
 For v0.1 this is a strict tree. Every Requirement has at least one Scenario,
-every Scenario has at least one Case, and every Case requires at least one
-verification layer. A node has exactly one parent except for a Requirement,
+every Scenario has at least one Case, and every Case declares at least one verification layer as evidence-required or
+explicitly unimplemented. A node has exactly one parent except for a Requirement,
 which is a root. External many-to-many relationships, including issue-tracker
 links, are outside v0.1.
 
@@ -32,7 +32,7 @@ For example, a Case requiring unit and integration verification produces two ind
 
 Evidence is an adapter-neutral test result linked to one or more canonical Case IDs and one verification layer. This supports both directions of a many-to-many relationship: one result may cover multiple Cases, and multiple results may cover one Case.
 
-The pure check core aggregates evidence into `PASS`, `FAIL`, `BROKEN`, `MISSING`, and `SKIPPED`. Evidence adapters map their native status and metadata into the core representation. Moura's Allure Results adapter requires neither an Allure Report server nor Allure runtime libraries, and the core types expose no Allure-specific fields.
+The pure check core aggregates evidence into `PASS`, `FAIL`, `BROKEN`, `MISSING`, and `SKIPPED`; an explicit manifest declaration adds `UNIMPLEMENTED` without pretending missing Evidence exists. Evidence adapters map their native status and metadata into the core representation. Moura's Allure Results adapter requires neither an Allure Report server nor Allure runtime libraries, and the core types expose no Allure-specific fields.
 
 Structural validation does not read test results or decide whether evidence is
 available. That is the responsibility of the separate evidence-checking core and

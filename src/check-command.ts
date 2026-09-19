@@ -85,7 +85,8 @@ export async function checkProjectDirectory(
   const adapted = { issues: evaluation.adapterIssues };
   const checked = evaluation.check;
   const stdout = checked.entries.map(
-    (entry) => `${entry.status} ${entry.caseId} [${entry.layer}]`,
+    (entry) =>
+      `${entry.status} ${entry.caseId} [${entry.layer}] (${entry.severity})`,
   );
   const stderr: string[] = [];
   if (adapted.issues.length > 0) {

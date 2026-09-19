@@ -3,17 +3,21 @@ import type { MouraManifest } from "./manifest.js";
 import type { Evidence, VerificationLayer } from "./model.js";
 
 export type VerificationCheckStatus =
-  "PASS" | "FAIL" | "BROKEN" | "MISSING" | "SKIPPED";
+  "PASS" | "FAIL" | "BROKEN" | "MISSING" | "SKIPPED" | "UNIMPLEMENTED";
+
+export type VerificationSeverity = "success" | "warning" | "error";
 
 export interface VerificationCheckResult {
   readonly caseId: CanonicalId;
   readonly layer: VerificationLayer;
   readonly status: VerificationCheckStatus;
+  readonly severity: VerificationSeverity;
 }
 
 export interface EvidenceIssue {
   readonly code:
     | "empty-evidence-coverage"
+    | "evidence-for-unimplemented-pair"
     | "non-case-evidence-target"
     | "non-required-evidence-pair"
     | "unknown-evidence-id"
@@ -42,6 +46,7 @@ export function checkVerification(
   const requiredPairs: Array<{
     caseId: CanonicalId;
     layer: VerificationLayer;
+    unimplemented: boolean;
   }> = [];
 
   for (const requirement of manifest.requirements) {
@@ -55,7 +60,9 @@ export function checkVerification(
         allNodeIds.add(caseId);
         caseIds.add(caseId);
         for (const layer of testCase.verify)
-          requiredPairs.push({ caseId, layer });
+          requiredPairs.push({ caseId, layer, unimplemented: false });
+        for (const layer of testCase.unimplemented ?? [])
+          requiredPairs.push({ caseId, layer, unimplemented: true });
       }
     }
   }
@@ -63,10 +70,20 @@ export function checkVerification(
   const declaredLayers = new Set(manifest.verificationLayers);
   const issues: EvidenceIssue[] = [];
   const requiredLayersByCase = new Map<CanonicalId, Set<VerificationLayer>>();
+  const unimplementedLayersByCase = new Map<
+    CanonicalId,
+    Set<VerificationLayer>
+  >();
   for (const { caseId, layer } of requiredPairs) {
     const layers = requiredLayersByCase.get(caseId) ?? new Set();
     layers.add(layer);
     requiredLayersByCase.set(caseId, layers);
+  }
+  for (const pair of requiredPairs) {
+    if (!pair.unimplemented) continue;
+    const layers = unimplementedLayersByCase.get(pair.caseId) ?? new Set();
+    layers.add(pair.layer);
+    unimplementedLayersByCase.set(pair.caseId, layers);
   }
   for (const item of evidence) {
     if (!declaredLayers.has(item.layer)) {
@@ -108,6 +125,13 @@ export function checkVerification(
           canonicalId: coveredId,
           layer: item.layer,
         });
+      } else if (unimplementedLayersByCase.get(coveredId)?.has(item.layer)) {
+        issues.push({
+          code: "evidence-for-unimplemented-pair",
+          message: `Evidence targets ${JSON.stringify(coveredId)} at layer ${JSON.stringify(item.layer)}, but that pair is explicitly unimplemented`,
+          canonicalId: coveredId,
+          layer: item.layer,
+        });
       }
     }
   }
@@ -123,26 +147,36 @@ export function checkVerification(
     return compareStrings(left.layer, right.layer);
   });
 
-  const entries = requiredPairs.map(({ caseId, layer }) => {
+  const entries = requiredPairs.map(({ caseId, layer, unimplemented }) => {
     const matching = evidence.filter(
       (item) => item.layer === layer && item.covers.includes(caseId),
     );
     let status: VerificationCheckStatus;
-    if (matching.length === 0) status = "MISSING";
+    if (unimplemented) status = "UNIMPLEMENTED";
+    else if (matching.length === 0) status = "MISSING";
     else if (matching.some((item) => item.status === "failed")) status = "FAIL";
     else if (matching.some((item) => item.status === "broken"))
       status = "BROKEN";
     else if (matching.some((item) => item.status === "passed")) status = "PASS";
     else status = "SKIPPED";
-    return { caseId, layer, status };
+    return { caseId, layer, status, severity: verificationSeverity(status) };
   });
 
   return {
     passed:
-      issues.length === 0 && entries.every((entry) => entry.status === "PASS"),
+      issues.length === 0 &&
+      entries.every((entry) => entry.severity !== "error"),
     entries,
     evidenceIssues: issues,
   };
+}
+
+export function verificationSeverity(
+  status: VerificationCheckStatus,
+): VerificationSeverity {
+  if (status === "PASS") return "success";
+  if (status === "SKIPPED" || status === "UNIMPLEMENTED") return "warning";
+  return "error";
 }
 
 function compareStrings(left: string, right: string): number {

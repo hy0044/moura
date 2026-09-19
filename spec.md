@@ -97,3 +97,25 @@ Evidence checking fails and reports evidence using a layer not declared by the p
 #### CASE-008 Treat broken evidence as broken
 
 A required Case × layer pair is `BROKEN` when at least one matching record is broken and no matching record is failed. Broken dominates passed and skipped records: broken alone, broken plus passed, and broken plus skipped are `BROKEN`, while failed plus broken is `FAIL`.
+
+#### CASE-009 Separate verification status from project severity
+
+`PASS` has success severity; `SKIPPED` and explicitly declared `UNIMPLEMENTED`
+have warning severity; and `FAIL`, `BROKEN`, and `MISSING` have error severity.
+A project passes with success and warning entries only, but fails when any error
+or evidence-validation issue exists.
+
+#### CASE-010 Represent unimplemented verification explicitly
+
+A Case may declare a layer in `unimplemented` instead of `verify`. This
+Git-reviewed Case × layer declaration produces `UNIMPLEMENTED` without
+Evidence. Omitting both a declaration and required Evidence never implies
+`UNIMPLEMENTED`; a `verify` pair without Evidence remains `MISSING`. A layer
+cannot appear in both lists, and Evidence for an unimplemented pair is a
+contradiction that fails checking.
+
+#### CASE-011 Surface status and severity through the CLI and report
+
+The check CLI and Requirement Coverage report preserve every verification
+status and identify its success, warning, or error severity. Warning-only
+checks exit successfully; errors and evidence-validation issues do not.

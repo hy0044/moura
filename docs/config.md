@@ -22,11 +22,14 @@ requirements:
           - id: CASE-001
             verify:
               - unit
+          - id: CASE-002
+            unimplemented:
+              - unit
 ```
 
 `version` must be the number `1`. `sources` names readable, project-relative Markdown files. Requirement prose belongs in requirement sources; detailed normal, abnormal, boundary, state, concurrency, and external-dependency behavior belongs in specification Scenarios and Cases.
 
-`verification.layers` declares the project's allowed layer strings. Moura has no built-in layer names. The nested manifest arrays establish the strict Requirement → Scenario → Case tree, and each Case's non-empty `verify` list declares its required layers. Long descriptions and derived canonical IDs do not belong in the manifest.
+`verification.layers` declares the project's allowed layer strings. Moura has no built-in layer names. The nested manifest arrays establish the strict Requirement → Scenario → Case tree, and each Case declares at least one layer across `verify` and `unimplemented`. `verify` requires runtime Evidence; `unimplemented` explicitly and reviewably records verification that does not exist yet. A layer may occur in only one list. Long descriptions and derived canonical IDs do not belong in the manifest.
 
 The schema is closed for v0.1: implementations must reject unknown fields in the objects shown above rather than silently assigning future meaning to them. Lists required by the model must be present and non-empty.
 
@@ -76,9 +79,9 @@ The `moura validate` command must return failure, without warnings, when it find
 - an empty local ID or one containing `/`, Unicode whitespace, a Unicode `Cc`
   control code point, or an unpaired UTF-16 surrogate;
 - a broken or missing Requirement → Scenario → Case relationship;
-- a Requirement without a Scenario, a Scenario without a Case, or a Case without a non-empty `verify` list;
+- a Requirement without a Scenario, a Scenario without a Case, or a Case without a layer in either `verify` or `unimplemented`;
 - an unsafe verification-layer name, an undeclared verification layer, or a
-  repeated layer within one Case;
+  repeated layer within or across one Case’s `verify` and `unimplemented` lists;
 - a duplicate derived canonical ID; or
 - a reserved Moura-managed Markdown ID absent from the manifest.
 

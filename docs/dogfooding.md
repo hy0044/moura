@@ -52,6 +52,8 @@ as a group.
 | `REQ-002/SCN-001/CASE-005`                                    | integration | `aggregates multiple records and layers through the filesystem command`                                                     |
 | `REQ-002/SCN-001/CASE-006`                                    | unit        | unknown ID, non-Case target, and empty-target tests                                                                         |
 | `REQ-002/SCN-001/CASE-007`                                    | unit        | undeclared-layer and non-required-pair tests                                                                                |
+| `REQ-002/SCN-001/CASE-009` and `CASE-010`                     | unit        | warning-severity, explicit-unimplemented, and contradiction tests                                                           |
+| `REQ-002/SCN-001/CASE-011`                                    | integration | CLI explicit-UNIMPLEMENTED warning and exit-code test                                                                       |
 
 There are currently no declared Case × layer pairs intentionally left without
 evidence. This statement is enforced by running `node dist/cli.js check .`
