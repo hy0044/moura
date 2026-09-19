@@ -86,6 +86,16 @@ Each hierarchy value is a local ID: for example, `moura_requirement=REQ-002`, `m
 
 For multi-case evidence, each label kind has the same number of values and values at the same position form a hierarchy triple. Producers repeat a shared Requirement or Scenario when necessary; this prevents ambiguous cross-products between unrelated hierarchy components. Repeated identical reconstructed canonical IDs are de-duplicated while preserving their first-seen order. Missing, invalid, or unequal label sequences produce adapter issues and no evidence. The caller-supplied source, or the result filename when loading a directory, is retained as adapter-neutral `Evidence.source` and does not affect aggregation. Whether a well-formed canonical Case ID or layer is declared by the validated project remains the responsibility of `checkVerification()` rather than the Allure-format adapter.
 
+The test helper also derives Allure's standard Behavior labels from the same
+parsed canonical ID: Requirement → `epic`, Scenario → `feature`, and Case →
+`story`. This is a presentation projection only. Allure Report 3.17.0 treats
+repeated values at successive Behavior levels as independent sets, producing
+their Cartesian product rather than preserving aligned tuples. Consequently,
+for multi-case evidence the helper deterministically projects only the first
+declared Case into Behavior labels. It continues to emit all ordered `moura_*`
+triples, and this adapter ignores Behavior labels even when they are absent,
+duplicated, or inconsistent with the authoritative metadata.
+
 ## Requirement Coverage report
 
 After evidence exists, `moura report [directory]` writes `<project>/moura-report/index.html`. The static report consumes the same validated manifest, normalized evidence, and `checkVerification()` result as `moura check`; it does not parse Allure or reproduce pair-status precedence.

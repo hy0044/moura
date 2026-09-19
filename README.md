@@ -131,6 +131,12 @@ All commands use the current working directory by default, or a supplied relativ
 
 Allure results associate evidence using one or more ordered `moura_requirement`, `moura_scenario`, and `moura_case` local-ID triples and exactly one `moura_layer` label. Moura reconstructs canonical Case IDs at the adapter boundary. See the [Allure evidence adapter contract](docs/check.md#allure-evidence-adapter) for supported statuses and input details.
 
+For browsing, Moura also projects a canonical Case ID into Allure's standard
+Behavior hierarchy: Requirement → `epic`, Scenario → `feature`, and Case →
+`story`. These labels are presentation-only. The `moura_*` labels above remain
+the authoritative evidence metadata consumed by Moura; the adapter never
+reconstructs evidence from `epic`, `feature`, or `story`.
+
 ## Development
 
 Moura starts as a small Node.js 24+ and TypeScript project.
@@ -164,6 +170,14 @@ map to canonical IDs in `Evidence.covers[]`, while exactly one `moura_layer`
 label maps to `Evidence.layer`. Case IDs and layer values must come from `moura.yaml` and obey
 the same identifier/layer character contract. Invalid identity labels are
 reported as evidence-input errors and do not produce normalized evidence.
+
+Allure Report 3.17.0 builds each Behavior level from all values of a repeated
+label. Repeating `epic`, `feature`, and `story` for a multi-case result therefore
+creates a Cartesian product and loses the original Case tuple association. To
+avoid displaying false paths, `mouraEvidenceName()` deterministically projects
+only the first declared Case into the Behavior hierarchy. It still emits every
+ordered Case tuple as authoritative `moura_*` metadata, so evidence checking is
+unchanged and complete.
 
 The executable exposes `validate`, `check`, `report`, version, and help commands. Domain types, coverage aggregation, report rendering, and canonical-ID construction are also exported for integrations.
 

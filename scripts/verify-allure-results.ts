@@ -113,5 +113,17 @@ export function verifyRepresentativeResult(
     throw new Error(`${name} has unexpected moura_case labels`);
   if (actualLayers.length !== 1 || actualLayers[0] !== expectedLayer)
     throw new Error(`${name} has an unexpected moura_layer label`);
+
+  const [requirement, scenario, testCase] = expectedCases[0]!.split("/");
+  const expectedBehavior = new Map([
+    ["epic", requirement!],
+    ["feature", scenario!],
+    ["story", testCase!],
+  ]);
+  for (const [label, value] of expectedBehavior) {
+    const actual = labelValues(match, label);
+    if (actual.length !== 1 || actual[0] !== value)
+      throw new Error(`${name} has an unexpected ${label} label`);
+  }
 }
 import { convertAllureResult } from "../src/adapters/allure.js";
