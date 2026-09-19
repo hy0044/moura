@@ -159,7 +159,9 @@ pnpm build && pnpm report:moura # create static Requirement Coverage HTML
 results. `pnpm test:allure` writes `allure-results/` with the official Vitest
 integration, then checks the emitted Moura metadata. Moura targets Allure Report
 3+. Report generation remains a separate command so existing result validation
-and static HTML generation have clear responsibilities.
+and static HTML generation have clear responsibilities. `pnpm report:allure`
+loads `allurerc.ts`, which configures the Awesome report tree to group by
+`epic` → `feature` → `story`, and verifies a representative generated tree.
 
 The repository annotates real validation and checking tests to dogfood its declared verification contract. These declarations are reviewed mappings to test behavior; Moura never synthesizes passing evidence. See the [dogfooding evidence mapping](docs/dogfooding.md) for the mapping rules and the current Case × layer inventory.
 
