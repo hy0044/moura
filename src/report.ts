@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import type { EvidenceAdapterIssue } from "./adapters/allure.js";
 import type {
-  VerificationCheckStatus,
+  VerificationCheckResult,
   VerificationProjectCheckResult,
 } from "./check.js";
 import { verificationSeverity } from "./check.js";
@@ -95,11 +95,11 @@ export function renderCoverageReport(
   const summary = summarizeCoverage(manifest, check);
   const entries = new Map<
     CanonicalId,
-    Map<VerificationLayer, VerificationCheckStatus>
+    Map<VerificationLayer, VerificationCheckResult>
   >();
   for (const entry of check.entries) {
     const layers = entries.get(entry.caseId) ?? new Map();
-    layers.set(entry.layer, entry.status);
+    layers.set(entry.layer, entry);
     entries.set(entry.caseId, layers);
   }
   const cards = (["requirements", "scenarios", "cases", "pairs"] as const)
@@ -132,15 +132,13 @@ export function renderCoverageReport(
                 ...(testCase.unimplemented ?? []),
               ]
                 .map((layer) => {
-                  const status = entries.get(caseId)?.get(layer);
-                  if (!status)
+                  const entry = entries.get(caseId)?.get(layer);
+                  if (!entry)
                     throw new Error(
                       `Check result omitted required pair ${caseId} × ${layer}`,
                     );
-                  const entry = check.entries.find(
-                    (item) => item.caseId === caseId && item.layer === layer,
-                  )!;
-                  return `<li><code>${renderText(layer)}</code> <span class="status ${status.toLowerCase()}" data-severity="${entry.severity}">${status}</span> <span class="severity ${entry.severity}">${entry.severity}</span></li>`;
+                  const { status, severity } = entry;
+                  return `<li><code>${renderText(layer)}</code> <span class="status ${status.toLowerCase()}" data-severity="${severity}">${status}</span> <span class="severity ${severity}">${severity}</span></li>`;
                 })
                 .join("");
               return `<section class="case"><h4>${renderText(caseId)}</h4><ul>${statuses}</ul></section>`;
