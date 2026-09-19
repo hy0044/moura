@@ -2,7 +2,11 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Evidence } from "../model.js";
-import { canonicalCaseIdError, interoperableStringError } from "../id.js";
+import {
+  canonicalCaseIdError,
+  interoperableStringError,
+  localId,
+} from "../id.js";
 
 /** The small, Moura-owned subset of an Allure result used during conversion. */
 export interface AllureEvidenceResult {
@@ -18,9 +22,14 @@ export interface AllureEvidenceLabel {
 export type EvidenceAdapterIssueCode =
   | "invalid-result"
   | "invalid-label"
+  | "invalid-moura-requirement-label"
+  | "invalid-moura-scenario-label"
   | "invalid-moura-case-label"
   | "invalid-moura-layer-label"
+  | "missing-moura-requirement"
+  | "missing-moura-scenario"
   | "missing-moura-case"
+  | "ambiguous-moura-hierarchy"
   | "missing-moura-layer"
   | "multiple-moura-layers"
   | "missing-status"
@@ -65,11 +74,16 @@ export function convertAllureResult(
   const mouraLabels = labels.filter(
     (label) =>
       isRecord(label) &&
-      (label.name === "moura_case" || label.name === "moura_layer"),
+      (label.name === "moura_requirement" ||
+        label.name === "moura_scenario" ||
+        label.name === "moura_case" ||
+        label.name === "moura_layer"),
   );
   if (mouraLabels.length === 0) return { evidence: [], issues: [] };
 
   const issues: EvidenceAdapterIssue[] = [];
+  const requirementValues: string[] = [];
+  const scenarioValues: string[] = [];
   const caseValues: string[] = [];
   const layerValues: string[] = [];
   for (const label of mouraLabels) {
@@ -81,15 +95,24 @@ export function convertAllureResult(
           source,
         ),
       );
-    } else if (label.name === "moura_case") {
-      if (canonicalCaseIdError(label.value))
+    } else if (label.name !== "moura_layer") {
+      try {
+        localId(label.value);
+      } catch {
+        const kind = String(label.name).replace("moura_", "");
         issues.push(
           issue(
-            "invalid-moura-case-label",
-            "moura_case contains characters or structure not allowed in a canonical Moura Case ID",
+            `invalid-moura-${kind}-label` as EvidenceAdapterIssueCode,
+            `${String(label.name)} contains characters or structure not allowed in a local Moura ID`,
             source,
           ),
         );
+        continue;
+      }
+      if (label.name === "moura_requirement")
+        requirementValues.push(label.value);
+      else if (label.name === "moura_scenario")
+        scenarioValues.push(label.value);
       else caseValues.push(label.value);
     } else if (interoperableStringError(label.value)) {
       issues.push(
@@ -102,11 +125,41 @@ export function convertAllureResult(
     } else layerValues.push(label.value);
   }
 
+  if (requirementValues.length === 0)
+    issues.push(
+      issue(
+        "missing-moura-requirement",
+        "Result has no valid moura_requirement label",
+        source,
+      ),
+    );
+  if (scenarioValues.length === 0)
+    issues.push(
+      issue(
+        "missing-moura-scenario",
+        "Result has no valid moura_scenario label",
+        source,
+      ),
+    );
   if (caseValues.length === 0)
     issues.push(
       issue(
         "missing-moura-case",
         "Result has no valid moura_case label",
+        source,
+      ),
+    );
+  if (
+    requirementValues.length > 0 &&
+    scenarioValues.length > 0 &&
+    caseValues.length > 0 &&
+    (requirementValues.length !== scenarioValues.length ||
+      scenarioValues.length !== caseValues.length)
+  )
+    issues.push(
+      issue(
+        "ambiguous-moura-hierarchy",
+        "Result must have equally many ordered moura_requirement, moura_scenario, and moura_case labels",
         source,
       ),
     );
@@ -152,8 +205,18 @@ export function convertAllureResult(
     );
 
   if (issues.length > 0) return { evidence: [], issues };
+  const canonicalCases = caseValues.map(
+    (testCase, index) =>
+      `${requirementValues[index]}/${scenarioValues[index]}/${testCase}`,
+  );
+  if (canonicalCases.some((caseId) => canonicalCaseIdError(caseId)))
+    return adapterFailure(
+      "ambiguous-moura-hierarchy",
+      "Result hierarchy labels do not form valid canonical Moura Case IDs",
+      source,
+    );
   const evidence: Evidence = {
-    covers: [...new Set(caseValues)],
+    covers: [...new Set(canonicalCases)],
     layer: layerValues[0]!,
     status: status as Evidence["status"],
     ...(source === undefined ? {} : { source }),

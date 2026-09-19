@@ -76,7 +76,9 @@ async function writeEvidence(
     JSON.stringify({
       status,
       labels: [
-        { name: "moura_case", value: caseId },
+        { name: "moura_requirement", value: caseId.split("/")[0] },
+        { name: "moura_scenario", value: caseId.split("/")[1] },
+        { name: "moura_case", value: caseId.split("/")[2] },
         { name: "moura_layer", value: "unit" },
       ],
     }),

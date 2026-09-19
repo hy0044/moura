@@ -57,19 +57,19 @@ The public Allure adapter reads the small structural subset of Allure result JSO
 
 Custom labels and statuses map as follows:
 
-| Allure input                    | Normalized Moura field |
-| ------------------------------- | ---------------------- |
-| every `moura_case` label        | `Evidence.covers[]`    |
-| exactly one `moura_layer` label | `Evidence.layer`       |
-| `passed`                        | `passed`               |
-| `failed`                        | `failed`               |
-| `broken`                        | `broken`               |
-| `skipped`                       | `skipped`              |
-| `unknown`                       | invalid adapter input  |
+| Allure input                                                          | Normalized Moura field |
+| --------------------------------------------------------------------- | ---------------------- |
+| ordered `moura_requirement` + `moura_scenario` + `moura_case` triples | `Evidence.covers[]`    |
+| exactly one `moura_layer` label                                       | `Evidence.layer`       |
+| `passed`                                                              | `passed`               |
+| `failed`                                                              | `failed`               |
+| `broken`                                                              | `broken`               |
+| `skipped`                                                             | `skipped`              |
+| `unknown`                                                             | invalid adapter input  |
 
-Every `moura_case` value must be a canonical Case ID with exactly three `/`-separated valid local IDs. Every `moura_layer` value must satisfy the verification-layer string-safety contract: it contains neither a Unicode `General_Category=Cc` control code point nor an unpaired UTF-16 surrogate. Invalid identity labels are adapter-input errors; the result produces no normalized evidence, and diagnostics identify the field and result source without reproducing the unsafe value.
+Each hierarchy value is a local ID: for example, `moura_requirement=REQ-002`, `moura_scenario=SCN-001`, and `moura_case=CASE-002`. The adapter joins these values into the internal canonical ID `REQ-002/SCN-001/CASE-002`. Every `moura_layer` value must satisfy the verification-layer string-safety contract: it contains neither a Unicode `General_Category=Cc` control code point nor an unpaired UTF-16 surrogate. Invalid identity labels are adapter-input errors; the result produces no normalized evidence, and diagnostics identify the field and result source without reproducing the unsafe value.
 
-Repeated identical valid `moura_case` values are de-duplicated while preserving their first-seen order. The caller-supplied source, or the result filename when loading a directory, is retained as adapter-neutral `Evidence.source` and does not affect aggregation. Whether a well-formed canonical Case ID or layer is declared by the validated project remains the responsibility of `checkVerification()` rather than the Allure-format adapter.
+For multi-case evidence, each label kind has the same number of values and values at the same position form a hierarchy triple. Producers repeat a shared Requirement or Scenario when necessary; this prevents ambiguous cross-products between unrelated hierarchy components. Repeated identical reconstructed canonical IDs are de-duplicated while preserving their first-seen order. Missing, invalid, or unequal label sequences produce adapter issues and no evidence. The caller-supplied source, or the result filename when loading a directory, is retained as adapter-neutral `Evidence.source` and does not affect aggregation. Whether a well-formed canonical Case ID or layer is declared by the validated project remains the responsibility of `checkVerification()` rather than the Allure-format adapter.
 
 ## Requirement Coverage report
 

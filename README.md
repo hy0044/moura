@@ -17,11 +17,13 @@ cd my-project
 moura validate
 ```
 
-Tests attach existing Allure evidence to a coverage point with a `moura_case`
-label containing the canonical Case ID and one `moura_layer` label:
+Tests expose the local IDs in a canonical Case path as separate Allure labels,
+plus one `moura_layer` label:
 
 ```ts
-await allure.label("moura_case", "REQ-001/SCN-001/CASE-001");
+await allure.label("moura_requirement", "REQ-001");
+await allure.label("moura_scenario", "SCN-001");
+await allure.label("moura_case", "CASE-001");
 await allure.label("moura_layer", "unit");
 ```
 
@@ -123,7 +125,7 @@ moura report [directory]   # write <project>/moura-report/index.html
 
 All commands use the current working directory by default, or a supplied relative or absolute project directory. `moura check` first validates the project, then consumes existing evidence from `<project>/allure-results/`; it does not run tests or generate evidence. Every required Case × verification-layer point must be `PASS`, with no adapter or semantic evidence issues, for the check command to succeed. `moura report` consumes the same structured result and produces deterministic static HTML without running tests.
 
-Allure results associate evidence using one or more `moura_case` labels containing canonical Case IDs and exactly one `moura_layer` label. See the [Allure evidence adapter contract](docs/check.md#allure-evidence-adapter) for supported statuses and input details.
+Allure results associate evidence using one or more ordered `moura_requirement`, `moura_scenario`, and `moura_case` local-ID triples and exactly one `moura_layer` label. Moura reconstructs canonical Case IDs at the adapter boundary. See the [Allure evidence adapter contract](docs/check.md#allure-evidence-adapter) for supported statuses and input details.
 
 ## Development
 
@@ -152,10 +154,10 @@ and static HTML generation have clear responsibilities.
 The repository annotates real validation and checking tests to dogfood its declared verification contract. These declarations are reviewed mappings to test behavior; Moura never synthesizes passing evidence.
 
 Evidence-producing tests use the Moura-owned custom Allure labels
-`moura_case` and `moura_layer`. They are not built-in Allure identity or suite
-semantics: repeated `moura_case` labels will map to future
-`Evidence.covers[]`, while the exactly one `moura_layer` label will map to future
-`Evidence.layer`. Case IDs and layer values must come from `moura.yaml` and obey
+`moura_requirement`, `moura_scenario`, `moura_case`, and `moura_layer`. They are
+not built-in Allure identity or suite semantics: aligned hierarchy label values
+map to canonical IDs in `Evidence.covers[]`, while exactly one `moura_layer`
+label maps to `Evidence.layer`. Case IDs and layer values must come from `moura.yaml` and obey
 the same identifier/layer character contract. Invalid identity labels are
 reported as evidence-input errors and do not produce normalized evidence.
 

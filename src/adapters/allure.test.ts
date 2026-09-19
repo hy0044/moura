@@ -18,7 +18,14 @@ function result(status: unknown = "passed", labels: readonly unknown[] = []) {
   return { status, labels };
 }
 
-const caseLabel = { name: "moura_case", value: "REQ-001/SCN-001/CASE-001" };
+function hierarchyLabels(caseId = "REQ-001/SCN-001/CASE-001") {
+  const [requirement, scenario, testCase] = caseId.split("/");
+  return [
+    { name: "moura_requirement", value: requirement },
+    { name: "moura_scenario", value: scenario },
+    { name: "moura_case", value: testCase },
+  ];
+}
 const layerLabel = { name: "moura_layer", value: "unit" };
 
 describe("Allure evidence conversion", () => {
@@ -27,7 +34,7 @@ describe("Allure evidence conversion", () => {
     (status) => {
       expect(
         convertAllureResult(
-          result(status, [caseLabel, layerLabel]),
+          result(status, [...hierarchyLabels(), layerLabel]),
           "one.json",
         ),
       ).toEqual({
@@ -47,18 +54,22 @@ describe("Allure evidence conversion", () => {
   it.each([
     [
       "unknown status",
-      result("unknown", [caseLabel, layerLabel]),
+      result("unknown", [...hierarchyLabels(), layerLabel]),
       "unknown-status",
     ],
-    ["missing status", { labels: [caseLabel, layerLabel] }, "missing-status"],
+    [
+      "missing status",
+      { labels: [...hierarchyLabels(), layerLabel] },
+      "missing-status",
+    ],
     [
       "unsupported status",
-      result("pending", [caseLabel, layerLabel]),
+      result("pending", [...hierarchyLabels(), layerLabel]),
       "unsupported-status",
     ],
     [
       "non-string status",
-      result(42, [caseLabel, layerLabel]),
+      result(42, [...hierarchyLabels(), layerLabel]),
       "malformed-status",
     ],
   ])("reports %s as an adapter issue", (_name, input, code) => {
@@ -72,9 +83,9 @@ describe("Allure evidence conversion", () => {
   it("collects multiple Cases and de-duplicates them in first-seen order", () => {
     const converted = convertAllureResult(
       result("passed", [
-        caseLabel,
-        { name: "moura_case", value: "REQ-001/SCN-001/CASE-002" },
-        caseLabel,
+        ...hierarchyLabels(),
+        ...hierarchyLabels("REQ-001/SCN-001/CASE-002"),
+        ...hierarchyLabels(),
         layerLabel,
       ]),
     );
@@ -82,6 +93,36 @@ describe("Allure evidence conversion", () => {
       "REQ-001/SCN-001/CASE-001",
       "REQ-001/SCN-001/CASE-002",
     ]);
+  });
+
+  it("reconstructs Cases across different Scenarios and Requirements positionally", () => {
+    const converted = convertAllureResult(
+      result("passed", [
+        ...hierarchyLabels("REQ-001/SCN-001/CASE-001"),
+        ...hierarchyLabels("REQ-001/SCN-002/CASE-001"),
+        ...hierarchyLabels("REQ-002/SCN-001/CASE-001"),
+        layerLabel,
+      ]),
+    );
+    expect(converted.evidence[0]?.covers).toEqual([
+      "REQ-001/SCN-001/CASE-001",
+      "REQ-001/SCN-002/CASE-001",
+      "REQ-002/SCN-001/CASE-001",
+    ]);
+  });
+
+  it("rejects unequal hierarchy sequences as ambiguous", () => {
+    const converted = convertAllureResult(
+      result("passed", [
+        ...hierarchyLabels(),
+        { name: "moura_case", value: "CASE-002" },
+        layerLabel,
+      ]),
+    );
+    expect(converted.evidence).toEqual([]);
+    expect(converted.issues).toContainEqual(
+      expect.objectContaining({ code: "ambiguous-moura-hierarchy" }),
+    );
   });
 
   it.each([
@@ -92,14 +133,18 @@ describe("Allure evidence conversion", () => {
     ["malformed canonical ID", "REQ-001/CASE-001"],
   ])("rejects a moura_case containing %s", (_name, value) => {
     const converted = convertAllureResult(
-      result("passed", [{ name: "moura_case", value }, layerLabel]),
+      result("passed", [
+        ...hierarchyLabels().slice(0, 2),
+        { name: "moura_case", value },
+        layerLabel,
+      ]),
       "unsafe-result.json",
     );
     expect(converted.evidence).toEqual([]);
     expect(converted.issues).toContainEqual({
       code: "invalid-moura-case-label",
       message:
-        "moura_case contains characters or structure not allowed in a canonical Moura Case ID",
+        "moura_case contains characters or structure not allowed in a local Moura ID",
       source: "unsafe-result.json",
     });
   });
@@ -112,7 +157,7 @@ describe("Allure evidence conversion", () => {
     ["lone surrogate", "unit\udfffbad"],
   ])("rejects a moura_layer containing %s", (_name, value) => {
     const converted = convertAllureResult(
-      result("passed", [caseLabel, { name: "moura_layer", value }]),
+      result("passed", [...hierarchyLabels(), { name: "moura_layer", value }]),
       "unsafe-result.json",
     );
     expect(converted.evidence).toEqual([]);
@@ -128,7 +173,7 @@ describe("Allure evidence conversion", () => {
     expect(
       convertAllureResult(
         result("passed", [
-          { name: "moura_case", value: "要件-一/場面-😀/事例-𠮷" },
+          ...hierarchyLabels("要件-一/場面-😀/事例-𠮷"),
           { name: "moura_layer", value: "層-🚀" },
         ]),
       ).evidence,
@@ -143,10 +188,24 @@ describe("Allure evidence conversion", () => {
 
   it.each([
     ["missing Case", [layerLabel], "missing-moura-case"],
-    ["missing layer", [caseLabel], "missing-moura-layer"],
+    [
+      "missing Requirement",
+      [...hierarchyLabels().slice(1), layerLabel],
+      "missing-moura-requirement",
+    ],
+    [
+      "missing Scenario",
+      [hierarchyLabels()[0], hierarchyLabels()[2], layerLabel],
+      "missing-moura-scenario",
+    ],
+    ["missing layer", [...hierarchyLabels()], "missing-moura-layer"],
     [
       "multiple layers",
-      [caseLabel, layerLabel, { name: "moura_layer", value: "integration" }],
+      [
+        ...hierarchyLabels(),
+        layerLabel,
+        { name: "moura_layer", value: "integration" },
+      ],
       "multiple-moura-layers",
     ],
   ])("reports %s metadata", (_name, labels, code) => {
@@ -173,11 +232,11 @@ describe("Allure results directory loading", () => {
       writeFile(join(directory, "z-result.json"), "not json"),
       writeFile(
         join(directory, "b-result.json"),
-        JSON.stringify(result("broken", [caseLabel, layerLabel])),
+        JSON.stringify(result("broken", [...hierarchyLabels(), layerLabel])),
       ),
       writeFile(
         join(directory, "a-result.json"),
-        JSON.stringify(result("passed", [caseLabel, layerLabel])),
+        JSON.stringify(result("passed", [...hierarchyLabels(), layerLabel])),
       ),
       writeFile(join(directory, "ignored-container.json"), "not json"),
       writeFile(join(directory, "categories.json"), "not json"),
