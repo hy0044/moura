@@ -23,9 +23,12 @@ actually verify a declared Case.
   specification evidence.
 
 `pnpm test:allure` checks the generated result JSON, not just the test source.
-It rejects malformed or undeclared mappings and requires passing evidence for
-every Case × layer declared by this repository's `moura.yaml`. After it runs,
-`node dist/cli.js check .` and `pnpm report:moura` consume those same files.
+It rejects malformed or undeclared mappings, but does not implement project
+coverage policy. After it runs, `node dist/cli.js check .` consumes those same
+files through Moura's production Allure adapter and core verification path. The
+self-check is responsible for reporting absent required pairs as `MISSING` and
+returning a non-zero exit code. `pnpm report:moura` uses that same path to render
+coverage.
 
 ## Current mapping
 
@@ -51,9 +54,11 @@ as a group.
 | `REQ-002/SCN-001/CASE-007`                                    | unit        | undeclared-layer and non-required-pair tests                                                                                |
 
 There are currently no declared Case × layer pairs intentionally left without
-evidence. This statement is enforced against generated Allure results by
-`pnpm test:allure`; it must not be preserved by weakening a mapping when the
-specification or tests change.
+evidence. This statement is enforced by running `node dist/cli.js check .`
+against generated Allure results; it must not be preserved by weakening a
+mapping when the specification or tests change. Moura deliberately has no
+dogfooding-only completeness checker parallel to its core verification
+semantics.
 
 Moura's `moura_*` labels remain the machine-readable evidence contract. Mapping
 Requirement, Scenario, and Case IDs to Allure's behavior hierarchy is a separate

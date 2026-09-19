@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   type AllureLabel,
   validateMouraEvidenceResults,
-  verifyRequiredMouraEvidence,
 } from "./verify-allure-results.js";
 
 const caseLayers = new Map([
@@ -117,35 +116,5 @@ describe("Allure Moura evidence metadata verification", () => {
         knownLayers,
       ),
     ).toThrow(message);
-  });
-
-  it("requires passing evidence for every declared Case × layer pair", () => {
-    const results = [
-      result(...hierarchyLabels("REQ-001/SCN-001/CASE-001"), {
-        name: "moura_layer",
-        value: "unit",
-      }),
-      result(...hierarchyLabels("REQ-001/SCN-001/CASE-001"), {
-        name: "moura_layer",
-        value: "integration",
-      }),
-      result(...hierarchyLabels("REQ-001/SCN-001/CASE-002"), {
-        name: "moura_layer",
-        value: "unit",
-      }),
-      result(...hierarchyLabels("REQ-001/SCN-001/CASE-003"), {
-        name: "moura_layer",
-        value: "integration",
-      }),
-    ];
-    expect(() =>
-      verifyRequiredMouraEvidence(results, caseLayers),
-    ).not.toThrow();
-
-    expect(() =>
-      verifyRequiredMouraEvidence(results.slice(1), caseLayers),
-    ).toThrow(
-      "Missing passing Moura evidence: REQ-001/SCN-001/CASE-001 × unit",
-    );
   });
 });

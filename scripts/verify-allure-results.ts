@@ -84,34 +84,6 @@ export function validateMouraEvidenceResults(
   }
 }
 
-export function verifyRequiredMouraEvidence(
-  results: readonly AllureResult[],
-  verificationLayersByCase: VerificationLayersByCase,
-): void {
-  const passedPairs = new Set<string>();
-  for (const result of results) {
-    if (result.status !== "passed") continue;
-    const converted = convertAllureResult(
-      result,
-      JSON.stringify(result.name ?? "unnamed result"),
-    );
-    for (const item of converted.evidence) {
-      for (const caseId of item.covers)
-        passedPairs.add(JSON.stringify([caseId, item.layer]));
-    }
-  }
-
-  const missing: string[] = [];
-  for (const [caseId, layers] of verificationLayersByCase) {
-    for (const layer of layers) {
-      if (!passedPairs.has(JSON.stringify([caseId, layer])))
-        missing.push(`${caseId} × ${layer}`);
-    }
-  }
-  if (missing.length > 0)
-    throw new Error(`Missing passing Moura evidence: ${missing.join(", ")}`);
-}
-
 export function verifyRepresentativeResult(
   results: readonly AllureResult[],
   name: string,
