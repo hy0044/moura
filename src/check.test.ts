@@ -86,14 +86,16 @@ describe("REQ-002 verification check contract", () => {
       testCase.name === "an empty set of"
         ? ["REQ-002/SCN-001/CASE-002"]
         : testCase.name === "failed"
-          ? ["REQ-002/SCN-001/CASE-003"]
+          ? ["REQ-002/SCN-001/CASE-003", "REQ-002/SCN-001/CASE-005"]
           : testCase.name === "skipped"
-            ? ["REQ-002/SCN-001/CASE-004"]
+            ? ["REQ-002/SCN-001/CASE-004", "REQ-002/SCN-001/CASE-005"]
             : testCase.name === "broken"
-              ? ["REQ-002/SCN-001/CASE-008"]
+              ? ["REQ-002/SCN-001/CASE-005", "REQ-002/SCN-001/CASE-008"]
               : testCase.name === "passed and skipped"
                 ? ["REQ-002/SCN-001/CASE-001", "REQ-002/SCN-001/CASE-005"]
-                : [];
+                : testCase.name === "passed"
+                  ? ["REQ-002/SCN-001/CASE-001"]
+                  : ["REQ-002/SCN-001/CASE-005"];
 
     it(mouraEvidenceName(name, cases, "unit"), () => {
       const result = checkVerification(manifest(), evidence(testCase.statuses));
@@ -102,44 +104,64 @@ describe("REQ-002 verification check contract", () => {
     });
   }
 
-  it("aggregates evidence independently of evidence ordering", () => {
-    for (const [left, right] of [
-      ["passed", "failed"],
-      ["passed", "skipped"],
-      ["skipped", "failed"],
-      ["broken", "passed"],
-      ["broken", "skipped"],
-      ["failed", "broken"],
-    ] as const) {
-      const forward = checkVerification(manifest(), evidence([left, right]));
-      const reverse = checkVerification(manifest(), evidence([right, left]));
-      expect(forward).toEqual(reverse);
-    }
-  });
+  it(
+    mouraEvidenceName(
+      "aggregates evidence independently of evidence ordering",
+      ["REQ-002/SCN-001/CASE-005"],
+      "unit",
+    ),
+    () => {
+      for (const [left, right] of [
+        ["passed", "failed"],
+        ["passed", "skipped"],
+        ["skipped", "failed"],
+        ["broken", "passed"],
+        ["broken", "skipped"],
+        ["failed", "broken"],
+      ] as const) {
+        const forward = checkVerification(manifest(), evidence([left, right]));
+        const reverse = checkVerification(manifest(), evidence([right, left]));
+        expect(forward).toEqual(reverse);
+      }
+    },
+  );
 
-  it("checks every required Case × layer pair independently", () => {
-    const missing = checkVerification(
-      manifest(["unit", "integration"]),
-      evidence(["passed"]),
-    );
-    expect(missing.entries).toEqual([
-      { caseId, layer: "unit", status: "PASS" },
-      { caseId, layer: "integration", status: "MISSING" },
-    ]);
-    expect(missing.passed).toBe(false);
+  it(
+    mouraEvidenceName(
+      "checks every required Case × layer pair independently",
+      ["REQ-002/SCN-001/CASE-005"],
+      "unit",
+    ),
+    () => {
+      const missing = checkVerification(
+        manifest(["unit", "integration"]),
+        evidence(["passed"]),
+      );
+      expect(missing.entries).toEqual([
+        { caseId, layer: "unit", status: "PASS" },
+        { caseId, layer: "integration", status: "MISSING" },
+      ]);
+      expect(missing.passed).toBe(false);
 
-    const failed = checkVerification(manifest(["unit", "integration"]), [
-      ...evidence(["passed"]),
-      ...evidence(["failed"], "integration"),
-    ]);
-    expect(failed.entries).toEqual([
-      { caseId, layer: "unit", status: "PASS" },
-      { caseId, layer: "integration", status: "FAIL" },
-    ]);
-  });
+      const failed = checkVerification(manifest(["unit", "integration"]), [
+        ...evidence(["passed"]),
+        ...evidence(["failed"], "integration"),
+      ]);
+      expect(failed.entries).toEqual([
+        { caseId, layer: "unit", status: "PASS" },
+        { caseId, layer: "integration", status: "FAIL" },
+      ]);
+    },
+  );
 
-  it("retains manifest Case and verify-layer order", () => {
-    const parsed = parseManifest(`
+  it(
+    mouraEvidenceName(
+      "retains manifest Case and verify-layer order",
+      ["REQ-002/SCN-001/CASE-005"],
+      "unit",
+    ),
+    () => {
+      const parsed = parseManifest(`
 version: 1
 sources: { requirements: [req.md], specifications: [spec.md] }
 verification: { layers: [integration, unit] }
@@ -156,19 +178,19 @@ requirements:
         cases:
           - { id: earlier, verify: [unit] }
 `);
-    expect(parsed.value).toBeDefined();
-    expect(
-      checkVerification(parsed.value!, []).entries.map(({ caseId, layer }) => [
-        caseId,
-        layer,
-      ]),
-    ).toEqual([
-      ["second/behavior/later", "unit"],
-      ["second/behavior/later", "integration"],
-      ["second/behavior/last", "integration"],
-      ["first/behavior/earlier", "unit"],
-    ]);
-  });
+      expect(parsed.value).toBeDefined();
+      expect(
+        checkVerification(parsed.value!, []).entries.map(
+          ({ caseId, layer }) => [caseId, layer],
+        ),
+      ).toEqual([
+        ["second/behavior/later", "unit"],
+        ["second/behavior/later", "integration"],
+        ["second/behavior/last", "integration"],
+        ["first/behavior/earlier", "unit"],
+      ]);
+    },
+  );
 
   it(
     mouraEvidenceName(
@@ -202,14 +224,21 @@ requirements:
     },
   );
 
-  it("reports evidence for a layer that the covered Case does not require", () => {
-    const result = checkVerification(
-      manifest(["unit"]),
-      evidence(["passed"], "integration"),
-    );
-    expect(result.evidenceIssues[0]?.code).toBe("non-required-evidence-pair");
-    expect(result.passed).toBe(false);
-  });
+  it(
+    mouraEvidenceName(
+      "reports evidence for a layer that the covered Case does not require",
+      ["REQ-002/SCN-001/CASE-007"],
+      "unit",
+    ),
+    () => {
+      const result = checkVerification(
+        manifest(["unit"]),
+        evidence(["passed"], "integration"),
+      );
+      expect(result.evidenceIssues[0]?.code).toBe("non-required-evidence-pair");
+      expect(result.passed).toBe(false);
+    },
+  );
 
   it("distinguishes Case × layer pairs containing delimiter characters", () => {
     const collisionManifest: MouraManifest = {

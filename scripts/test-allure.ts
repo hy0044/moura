@@ -10,6 +10,7 @@ import { parseManifest } from "../src/manifest.js";
 import {
   parseAllureResult,
   validateMouraEvidenceResults,
+  verifyRequiredMouraEvidence,
   verifyRepresentativeResult,
 } from "./verify-allure-results.js";
 
@@ -71,6 +72,7 @@ const results = readdirSync(resultsDirectory)
   });
 
 validateMouraEvidenceResults(results, verificationLayersByCase, layers);
+verifyRequiredMouraEvidence(results, verificationLayersByCase);
 verifyRepresentativeResult(
   results,
   "aggregates an empty set of evidence as MISSING",

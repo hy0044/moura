@@ -151,7 +151,7 @@ integration, then checks the emitted Moura metadata. Moura targets Allure Report
 3+. Report generation remains a separate command so existing result validation
 and static HTML generation have clear responsibilities.
 
-The repository annotates real validation and checking tests to dogfood its declared verification contract. These declarations are reviewed mappings to test behavior; Moura never synthesizes passing evidence.
+The repository annotates real validation and checking tests to dogfood its declared verification contract. These declarations are reviewed mappings to test behavior; Moura never synthesizes passing evidence. See the [dogfooding evidence mapping](docs/dogfooding.md) for the mapping rules and the current Case × layer inventory.
 
 Evidence-producing tests use the Moura-owned custom Allure labels
 `moura_requirement`, `moura_scenario`, `moura_case`, and `moura_layer`. They are
