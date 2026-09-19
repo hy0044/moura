@@ -222,6 +222,26 @@ describe("Allure evidence conversion", () => {
       ),
     ).toEqual({ evidence: [], issues: [] });
   });
+
+  it("reconstructs evidence only from Moura labels when Behavior labels disagree", () => {
+    expect(
+      convertAllureResult(
+        result("passed", [
+          ...hierarchyLabels("REQ-001/SCN-001/CASE-001"),
+          layerLabel,
+          { name: "epic", value: "REQ-999" },
+          { name: "feature", value: "SCN-999" },
+          { name: "story", value: "CASE-999" },
+        ]),
+      ).evidence,
+    ).toEqual([
+      {
+        covers: ["REQ-001/SCN-001/CASE-001"],
+        layer: "unit",
+        status: "passed",
+      },
+    ]);
+  });
 });
 
 describe("Allure results directory loading", () => {

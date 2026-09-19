@@ -62,6 +62,10 @@ mapping when the specification or tests change. Moura deliberately has no
 dogfooding-only completeness checker parallel to its core verification
 semantics.
 
-Moura's `moura_*` labels remain the machine-readable evidence contract. Mapping
-Requirement, Scenario, and Case IDs to Allure's behavior hierarchy is a separate
-presentation concern and is not part of this dogfooding policy.
+Moura's `moura_*` labels remain the authoritative machine-readable evidence
+contract. Dogfooding results additionally project Requirement, Scenario, and
+Case to Allure's standard `epic`, `feature`, and `story` labels for presentation.
+The generated-result check fixes both projections for a representative
+single-case result. For multi-case results, Allure 3.17.0 cannot retain tuple
+associations across repeated Behavior labels, so only the first declared Case
+is projected; all Cases remain present in the ordered authoritative labels.

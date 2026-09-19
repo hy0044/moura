@@ -13,18 +13,30 @@ export function mouraEvidenceName(
   if (process.env.MOURA_ALLURE_METADATA !== "true" || cases.length === 0)
     return name;
 
-  const hierarchyLabels = cases.flatMap((caseId) => {
+  const hierarchies = cases.map((caseId) => {
     if (canonicalCaseIdError(caseId))
       throw new Error(`Invalid canonical Moura Case ID: ${caseId}`);
     const parts = caseId.split("/");
     const [requirement, scenario, testCase] = parts as [string, string, string];
-    return [
+    return { requirement, scenario, testCase };
+  });
+  const mouraLabels = hierarchies.flatMap(
+    ({ requirement, scenario, testCase }) => [
       `@allure.label.moura_requirement:${requirement}`,
       `@allure.label.moura_scenario:${scenario}`,
       `@allure.label.moura_case:${testCase}`,
-    ];
-  });
-  return [name, ...hierarchyLabels, `@allure.label.moura_layer:${layer}`].join(
-    " ",
+    ],
   );
+  const representative = hierarchies[0]!;
+  const behaviorLabels = [
+    `@allure.label.epic:${representative.requirement}`,
+    `@allure.label.feature:${representative.scenario}`,
+    `@allure.label.story:${representative.testCase}`,
+  ];
+  return [
+    name,
+    ...mouraLabels,
+    `@allure.label.moura_layer:${layer}`,
+    ...behaviorLabels,
+  ].join(" ");
 }
