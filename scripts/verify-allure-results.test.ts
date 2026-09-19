@@ -13,7 +13,16 @@ const caseLayers = new Map([
 const knownLayers = new Set(["unit", "integration"]);
 
 function result(...labels: AllureLabel[]) {
-  return { name: "evidence result", labels };
+  return { name: "evidence result", status: "passed", labels };
+}
+
+function hierarchyLabels(caseId: string): AllureLabel[] {
+  const [requirement, scenario, testCase] = caseId.split("/");
+  return [
+    { name: "moura_requirement", value: requirement! },
+    { name: "moura_scenario", value: scenario! },
+    { name: "moura_case", value: testCase! },
+  ];
 }
 
 describe("Allure Moura evidence metadata verification", () => {
@@ -33,10 +42,10 @@ describe("Allure Moura evidence metadata verification", () => {
     expect(() =>
       validateMouraEvidenceResults(
         [
-          result(
-            ...cases.map((caseId) => ({ name: "moura_case", value: caseId })),
-            { name: "moura_layer", value: "unit" },
-          ),
+          result(...cases.flatMap(hierarchyLabels), {
+            name: "moura_layer",
+            value: "unit",
+          }),
         ],
         caseLayers,
         knownLayers,
@@ -48,17 +57,17 @@ describe("Allure Moura evidence metadata verification", () => {
     {
       name: "missing moura_case",
       labels: [{ name: "moura_layer", value: "unit" }],
-      message: "no moura_case",
+      message: "no valid moura_requirement",
     },
     {
       name: "missing moura_layer",
-      labels: [{ name: "moura_case", value: "REQ-001/SCN-001/CASE-001" }],
-      message: "no moura_layer",
+      labels: hierarchyLabels("REQ-001/SCN-001/CASE-001"),
+      message: "no valid moura_layer",
     },
     {
       name: "duplicate moura_layer",
       labels: [
-        { name: "moura_case", value: "REQ-001/SCN-001/CASE-001" },
+        ...hierarchyLabels("REQ-001/SCN-001/CASE-001"),
         { name: "moura_layer", value: "unit" },
         { name: "moura_layer", value: "unit" },
       ],
@@ -67,7 +76,7 @@ describe("Allure Moura evidence metadata verification", () => {
     {
       name: "unknown Case",
       labels: [
-        { name: "moura_case", value: "REQ-999/SCN-999/CASE-999" },
+        ...hierarchyLabels("REQ-999/SCN-999/CASE-999"),
         { name: "moura_layer", value: "unit" },
       ],
       message: "unknown Moura Case",
@@ -75,7 +84,7 @@ describe("Allure Moura evidence metadata verification", () => {
     {
       name: "unknown layer",
       labels: [
-        { name: "moura_case", value: "REQ-001/SCN-001/CASE-001" },
+        ...hierarchyLabels("REQ-001/SCN-001/CASE-001"),
         { name: "moura_layer", value: "system" },
       ],
       message: "unknown Moura verification layer",
@@ -83,7 +92,7 @@ describe("Allure Moura evidence metadata verification", () => {
     {
       name: "non-required Case and layer pair",
       labels: [
-        { name: "moura_case", value: "REQ-001/SCN-001/CASE-003" },
+        ...hierarchyLabels("REQ-001/SCN-001/CASE-003"),
         { name: "moura_layer", value: "unit" },
       ],
       message:
@@ -92,8 +101,8 @@ describe("Allure Moura evidence metadata verification", () => {
     {
       name: "multiple Cases where one does not require the layer",
       labels: [
-        { name: "moura_case", value: "REQ-001/SCN-001/CASE-001" },
-        { name: "moura_case", value: "REQ-001/SCN-001/CASE-003" },
+        ...hierarchyLabels("REQ-001/SCN-001/CASE-001"),
+        ...hierarchyLabels("REQ-001/SCN-001/CASE-003"),
         { name: "moura_layer", value: "unit" },
       ],
       message:

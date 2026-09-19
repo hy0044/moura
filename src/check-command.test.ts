@@ -56,14 +56,17 @@ function allure(
   caseId = "REQ-001/SCN-001/CASE-001",
   labels = true,
 ) {
+  const [requirement, scenario, testCase] = caseId.split("/");
+  const hierarchy = [
+    { name: "moura_requirement", value: requirement },
+    { name: "moura_scenario", value: scenario },
+    { name: "moura_case", value: testCase },
+  ];
   return {
     status,
     labels: labels
-      ? [
-          { name: "moura_case", value: caseId },
-          { name: "moura_layer", value: "unit" },
-        ]
-      : [{ name: "moura_case", value: caseId }],
+      ? [...hierarchy, { name: "moura_layer", value: "unit" }]
+      : hierarchy,
   };
 }
 
@@ -106,7 +109,9 @@ requirements:
           JSON.stringify({
             ...allure("passed"),
             labels: [
-              { name: "moura_case", value: "REQ-001/SCN-001/CASE-001" },
+              { name: "moura_requirement", value: "REQ-001" },
+              { name: "moura_scenario", value: "SCN-001" },
+              { name: "moura_case", value: "CASE-001" },
               { name: "moura_layer", value: "integration" },
             ],
           }),

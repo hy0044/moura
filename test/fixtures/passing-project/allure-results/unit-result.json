@@ -2,7 +2,9 @@
   "name": "passing unit evidence",
   "status": "passed",
   "labels": [
-    { "name": "moura_case", "value": "REQ-001/SCN-001/CASE-001" },
+    { "name": "moura_requirement", "value": "REQ-001" },
+    { "name": "moura_scenario", "value": "SCN-001" },
+    { "name": "moura_case", "value": "CASE-001" },
     { "name": "moura_layer", "value": "unit" }
   ]
 }

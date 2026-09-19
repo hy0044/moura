@@ -57,21 +57,12 @@ export function validateMouraEvidenceResults(
   verificationLayers: ReadonlySet<string>,
 ): void {
   for (const result of results) {
-    const cases = labelValues(result, "moura_case");
-    const layers = labelValues(result, "moura_layer");
-    if (cases.length === 0 && layers.length === 0) continue;
-
     const resultName = JSON.stringify(result.name ?? "unnamed result");
-    if (cases.length === 0)
-      throw new Error(`${resultName} has moura_layer but no moura_case label`);
-    if (layers.length === 0)
-      throw new Error(`${resultName} has moura_case but no moura_layer label`);
-    if (layers.length !== 1)
-      throw new Error(`${resultName} must have exactly one moura_layer label`);
-
-    const layer = layers[0];
-    if (layer === undefined)
-      throw new Error(`${resultName} has no Moura verification layer`);
+    const converted = convertAllureResult(result, resultName);
+    if (converted.issues.length > 0)
+      throw new Error(converted.issues[0]!.message);
+    if (converted.evidence.length === 0) continue;
+    const { covers: cases, layer } = converted.evidence[0]!;
     for (const caseId of cases) {
       const requiredLayers = verificationLayersByCase.get(caseId);
       if (!requiredLayers)
@@ -108,7 +99,10 @@ export function verifyRepresentativeResult(
   const match = matches[0];
   if (!match)
     throw new Error(`Allure result ${JSON.stringify(name)} is missing`);
-  const actualCases = labelValues(match, "moura_case").sort();
+  const converted = convertAllureResult(match, name);
+  if (converted.issues.length > 0 || converted.evidence.length !== 1)
+    throw new Error(`${name} has invalid Moura hierarchy labels`);
+  const actualCases = [...converted.evidence[0]!.covers].sort();
   const actualLayers = labelValues(match, "moura_layer");
   if (
     actualCases.length !== expectedCases.length ||
@@ -120,3 +114,4 @@ export function verifyRepresentativeResult(
   if (actualLayers.length !== 1 || actualLayers[0] !== expectedLayer)
     throw new Error(`${name} has an unexpected moura_layer label`);
 }
+import { convertAllureResult } from "../src/adapters/allure.js";

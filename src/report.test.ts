@@ -173,7 +173,9 @@ requirements:
       JSON.stringify({
         status: "passed",
         labels: [
-          { name: "moura_case", value: "R/S/C\u0000ignored" },
+          { name: "moura_requirement", value: "R" },
+          { name: "moura_scenario", value: "S" },
+          { name: "moura_case", value: "C\u0000ignored" },
           { name: "moura_layer", value: "unit" },
         ],
       }),
@@ -182,7 +184,7 @@ requirements:
     const result = await reportProjectDirectory(directory);
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain(
-      "invalid-moura-case-label: unsafe-result.json: moura_case contains characters or structure not allowed in a canonical Moura Case ID",
+      "invalid-moura-case-label: unsafe-result.json: moura_case contains characters or structure not allowed in a local Moura ID",
     );
     const html = await readFile(result.outputPath!, "utf8");
     expect(html).toContain("invalid-moura-case-label");
