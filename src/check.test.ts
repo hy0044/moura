@@ -97,11 +97,25 @@ describe("REQ-002 verification check contract", () => {
                   ? ["REQ-002/SCN-001/CASE-001"]
                   : ["REQ-002/SCN-001/CASE-005"];
 
-    it(mouraEvidenceName(name, cases, "unit"), () => {
-      const result = checkVerification(manifest(), evidence(testCase.statuses));
-      expect(result.entries[0]?.status).toBe(testCase.expected);
-      expect(result.passed).toBe(testCase.expected === "PASS");
-    });
+    it(
+      mouraEvidenceName(
+        name,
+        testCase.expected === "SKIPPED"
+          ? [...cases, "REQ-002/SCN-001/CASE-009"]
+          : cases,
+        "unit",
+      ),
+      () => {
+        const result = checkVerification(
+          manifest(),
+          evidence(testCase.statuses),
+        );
+        expect(result.entries[0]?.status).toBe(testCase.expected);
+        expect(result.passed).toBe(
+          testCase.expected === "PASS" || testCase.expected === "SKIPPED",
+        );
+      },
+    );
   }
 
   it(
@@ -138,8 +152,13 @@ describe("REQ-002 verification check contract", () => {
         evidence(["passed"]),
       );
       expect(missing.entries).toEqual([
-        { caseId, layer: "unit", status: "PASS" },
-        { caseId, layer: "integration", status: "MISSING" },
+        { caseId, layer: "unit", status: "PASS", severity: "success" },
+        {
+          caseId,
+          layer: "integration",
+          status: "MISSING",
+          severity: "error",
+        },
       ]);
       expect(missing.passed).toBe(false);
 
@@ -148,9 +167,73 @@ describe("REQ-002 verification check contract", () => {
         ...evidence(["failed"], "integration"),
       ]);
       expect(failed.entries).toEqual([
-        { caseId, layer: "unit", status: "PASS" },
-        { caseId, layer: "integration", status: "FAIL" },
+        { caseId, layer: "unit", status: "PASS", severity: "success" },
+        {
+          caseId,
+          layer: "integration",
+          status: "FAIL",
+          severity: "error",
+        },
       ]);
+    },
+  );
+
+  it(
+    mouraEvidenceName(
+      "treats an explicit unimplemented declaration as a warning",
+      ["REQ-002/SCN-001/CASE-009", "REQ-002/SCN-001/CASE-010"],
+      "unit",
+    ),
+    () => {
+      const parsed = parseManifest(`
+version: 1
+sources: { requirements: [req.md], specifications: [spec.md] }
+verification: { layers: [unit, integration] }
+requirements:
+  - id: requirement
+    scenarios:
+      - id: scenario
+        cases:
+          - { id: case, verify: [unit], unimplemented: [integration] }
+`);
+      const result = checkVerification(parsed.value!, evidence(["passed"]));
+      expect(result.entries).toEqual([
+        { caseId, layer: "unit", status: "PASS", severity: "success" },
+        {
+          caseId,
+          layer: "integration",
+          status: "UNIMPLEMENTED",
+          severity: "warning",
+        },
+      ]);
+      expect(result.passed).toBe(true);
+    },
+  );
+
+  it(
+    mouraEvidenceName(
+      "rejects evidence that contradicts an unimplemented declaration",
+      ["REQ-002/SCN-001/CASE-010"],
+      "unit",
+    ),
+    () => {
+      const parsed = parseManifest(`
+version: 1
+sources: { requirements: [req.md], specifications: [spec.md] }
+verification: { layers: [unit] }
+requirements:
+  - id: requirement
+    scenarios:
+      - id: scenario
+        cases:
+          - { id: case, unimplemented: [unit] }
+`);
+      const result = checkVerification(parsed.value!, evidence(["passed"]));
+      expect(result.entries[0]?.status).toBe("UNIMPLEMENTED");
+      expect(result.evidenceIssues[0]?.code).toBe(
+        "evidence-for-unimplemented-pair",
+      );
+      expect(result.passed).toBe(false);
     },
   );
 

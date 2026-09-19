@@ -109,18 +109,21 @@ export function validateStructure(
         );
         addCanonical(nodes, canonicalIds, errors);
         nonEmpty(
-          testCase.verify,
+          [...testCase.verify, ...(testCase.unimplemented ?? [])],
           "missing-verify",
-          `${path(nodes)} must declare at least one verification layer`,
+          `${path(nodes)} must declare at least one verify or unimplemented layer`,
           errors,
         );
         const verifies = new Set<string>();
-        for (const layer of testCase.verify) {
+        for (const layer of [
+          ...testCase.verify,
+          ...(testCase.unimplemented ?? []),
+        ]) {
           duplicate(
             verifies,
             layer,
             "duplicate-verify-layer",
-            `${path(nodes)} repeats verification layer ${JSON.stringify(layer)}`,
+            `${path(nodes)} repeats verification layer ${JSON.stringify(layer)} across verify/unimplemented declarations`,
             errors,
           );
           if (!manifest.verificationLayers.includes(layer)) {

@@ -13,7 +13,10 @@ export interface TraceNode {
 
 export interface CaseNode extends TraceNode {
   readonly kind: "case";
+  /** Layers for which runtime Evidence is required. */
   readonly verify: readonly VerificationLayer[];
+  /** Explicit, Git-reviewed declarations for verification not yet implemented. */
+  readonly unimplemented?: readonly VerificationLayer[];
 }
 
 export interface ScenarioNode extends TraceNode {

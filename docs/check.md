@@ -19,7 +19,7 @@ The normalized model and aggregation have no Allure, JUnit XML, test-runner, or 
 
 ## Pair aggregation
 
-Evidence matches a required pair only when `covers` contains that pair's canonical Case ID and `layer` equals its verification layer. Every layer in a Case's `verify` list creates an independent pair.
+Evidence matches a required pair only when `covers` contains that pair's canonical Case ID and `layer` equals its verification layer. Every layer in a Case's `verify` list creates an independent evidence-required pair. Every layer in `unimplemented` creates an explicit `UNIMPLEMENTED` pair for which Evidence is not expected. Evidence targeting such a pair is a contradictory semantic issue; it never overrides the manifest.
 
 For all matching evidence, apply this precedence:
 
@@ -31,11 +31,26 @@ For all matching evidence, apply this precedence:
 
 Consequently, precedence is `FAILED > BROKEN > PASSED > SKIPPED`: passed plus skipped is `PASS`, broken plus passed or skipped is `BROKEN`, and any combination containing failed is `FAIL`. This rule is independent of evidence order.
 
+`UNIMPLEMENTED` does not participate in Evidence aggregation: it comes only from the manifest. No Evidence for a `verify` pair is always `MISSING`, never inferred as `UNIMPLEMENTED`.
+
+## Status and severity
+
+| Status          | Severity | Meaning                                                                                 |
+| --------------- | -------- | --------------------------------------------------------------------------------------- |
+| `PASS`          | success  | acceptable passing Evidence exists                                                      |
+| `SKIPPED`       | warning  | Evidence exists and every matching result was explicitly skipped                        |
+| `UNIMPLEMENTED` | warning  | the manifest explicitly declares that this Case × layer verification is not implemented |
+| `FAIL`          | error    | at least one matching result failed                                                     |
+| `BROKEN`        | error    | at least one matching result is broken and none failed                                  |
+| `MISSING`       | error    | Evidence was required by `verify`, but none exists                                      |
+
+Status and severity are separate. Warning statuses remain `SKIPPED` or `UNIMPLEMENTED`; they are not converted to `PASS`. A project passes when it has no error entries and no adapter or semantic evidence issues.
+
 ## Structured result and ordering
 
-The check result contains one structured entry per required pair with its canonical Case ID, layer, and `PASS`, `FAIL`, `BROKEN`, `MISSING`, or `SKIPPED` status. It also contains deterministic evidence issues and a project-level `passed` value. Entries retain manifest order: Requirement, then Scenario, then Case, then the Case's `verify` layer order. Adapter or evidence ordering never changes entry order or aggregation.
+The check result contains one structured entry per declared pair with its canonical Case ID, layer, status (`PASS`, `FAIL`, `BROKEN`, `MISSING`, `SKIPPED`, or `UNIMPLEMENTED`), and severity. It also contains deterministic evidence issues and a project-level `passed` value. Entries retain manifest order: Requirement, then Scenario, then Case, then the Case's `verify` layers followed by its `unimplemented` layers. Adapter or evidence ordering never changes entry order or aggregation.
 
-The project passes only when every required pair is `PASS` and there are no evidence issues.
+The project passes when every pair has success or warning severity and there are no evidence issues.
 
 ## CLI flow
 
@@ -47,9 +62,9 @@ The project passes only when every required pair is `PASS` and there are no evid
 4. render deterministic results; and
 5. exit `0` only when the project check passes.
 
-Any `FAIL`, `BROKEN`, `MISSING`, `SKIPPED`, invalid evidence, or structural validation error results in exit `1`. The directory defaults to the current working directory. Evidence is consumed from `<project>/allure-results/`; the command does not run tests or create evidence. A missing or unreadable results directory is an adapter input failure, while a readable directory with no matching evidence produces `MISSING` entries.
+Any `FAIL`, `BROKEN`, `MISSING`, invalid evidence, or structural validation error results in exit `1`. `SKIPPED` and `UNIMPLEMENTED` are warnings and do not by themselves cause failure. The directory defaults to the current working directory. Evidence is consumed from `<project>/allure-results/`; the command does not run tests or create evidence. A missing or unreadable results directory is an adapter input failure, while a readable directory with no matching evidence produces `MISSING` entries.
 
-Each required pair is printed as `<STATUS> <canonical Case ID> [<layer>]`. Adapter issues and semantic evidence issues are reported separately. The command succeeds only when every required verification point is `PASS` and neither kind of issue exists.
+Each declared pair is printed as `<STATUS> <canonical Case ID> [<layer>] (<severity>)`. Adapter issues and semantic evidence issues are reported separately. The command succeeds when no entry has error severity and neither kind of issue exists.
 
 ## Allure evidence adapter
 
@@ -78,6 +93,6 @@ After evidence exists, `moura report [directory]` writes `<project>/moura-report
 `moura-report/` is generated output owned and managed by Moura. Running `moura report` may delete and recreate the entire directory, so do not place files there that you want to preserve.
 Moura assumes no concurrently malicious process mutates the validated project directory while report output is being recreated; defending against such races is outside its filesystem threat model.
 
-A required Case × layer pair is covered only when it is `PASS`. A Case is fully verified only when every required layer is `PASS`; a Scenario only when every Case is fully verified; and a Requirement only when every Scenario is fully verified. Project and per-layer counts use the same rule. `FAIL`, `BROKEN`, `SKIPPED`, and `MISSING` are displayed as gaps.
+A required Case × layer pair is covered only when it is `PASS`. A Case is fully verified only when every required layer is `PASS`; a Scenario only when every Case is fully verified; and a Requirement only when every Scenario is fully verified. Project and per-layer counts use the same rule. `FAIL`, `BROKEN`, `SKIPPED`, `UNIMPLEMENTED`, and `MISSING` are distinct gaps, with warning and error severity shown separately.
 
 Moura verifies declared traceability and its evidence; it does not prove that a test semantically verifies the specification it declares. Reviewers remain responsible for ensuring each `covers` declaration truthfully represents the test behavior.

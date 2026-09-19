@@ -28,13 +28,13 @@ afterEach(async () =>
 const manifest = parseManifest(`
 version: 1
 sources: { requirements: [req.md], specifications: [spec.md] }
-verification: { layers: [unit, integration, system, manual, security] }
+verification: { layers: [unit, integration, system, manual, security, future] }
 requirements:
   - id: REQ-A&amp;
     scenarios:
       - id: SCN-ONE
         cases:
-          - { id: CASE-X, verify: [unit, integration, system, manual, security] }
+          - { id: CASE-X, verify: [unit, integration, system, manual, security], unimplemented: [future] }
 `).value!;
 
 describe("requirement coverage report", () => {
@@ -67,8 +67,17 @@ describe("requirement coverage report", () => {
     expect(first).toContain(
       '<meta name="format-detection" content="telephone=no">',
     );
-    for (const status of ["PASS", "FAIL", "BROKEN", "SKIPPED", "MISSING"])
+    for (const status of [
+      "PASS",
+      "FAIL",
+      "BROKEN",
+      "SKIPPED",
+      "UNIMPLEMENTED",
+      "MISSING",
+    ])
       expect(first).toContain(status);
+    expect(first).toContain('data-severity="warning"');
+    expect(first).toContain('data-severity="error"');
     expect(first).toContain("Per-layer coverage");
     expect(first).toContain("REQ-A&amp;amp;/SCN-ONE/CASE-X");
     expect(first).toContain("0 / 1 (0%)");

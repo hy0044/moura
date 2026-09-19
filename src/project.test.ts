@@ -124,6 +124,33 @@ describe("manifest parsing and validation", () => {
     () => expect(validate().errors).toEqual([]),
   );
 
+  it("accepts an explicit unimplemented layer without a verify list", () => {
+    const source = validManifest.replace(
+      "verify: [unit]",
+      "unimplemented: [unit]",
+    );
+    const result = validate(source);
+    expect(result.errors).toEqual([]);
+    const parsed = parseManifest(source);
+    expect(parsed.value?.requirements[0]?.scenarios[0]?.cases[0]).toMatchObject(
+      { verify: [], unimplemented: ["unit"] },
+    );
+  });
+
+  it("rejects duplicate and unknown unimplemented layer declarations", () => {
+    expect(
+      codes(
+        validManifest.replace(
+          "verify: [unit]",
+          "verify: [unit]\n            unimplemented: [unit]",
+        ),
+      ),
+    ).toContain("duplicate-verify-layer");
+    expect(
+      codes(validManifest.replace("verify: [unit]", "unimplemented: [other]")),
+    ).toContain("unknown-verification-layer");
+  });
+
   it(
     mouraEvidenceName(
       "rejects unsafe local IDs and verification-layer names at the project boundary",
